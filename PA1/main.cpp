@@ -14,9 +14,11 @@ int main(int argc, char* argv[]) {
   start_time = std::chrono::steady_clock::now(); 
 
   fm.read_netlist_file(argv[1]);
+  fm.init();
+  fm.init_partition();
+  fm.dump_nets();
 
   end_time = std::chrono::steady_clock::now(); 
-
 
 
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;  
