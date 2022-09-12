@@ -5,7 +5,6 @@ int main(int argc, char* argv[]) {
   if (argc != 2) {
     std::cerr << "Usage: ./exec [netlist_file]" << std::endl;
     std::exit(EXIT_FAILURE);
-
   }
 
   FMPartition::FMPartition fm;
@@ -16,11 +15,12 @@ int main(int argc, char* argv[]) {
   fm.read_netlist_file(argv[1]);
   fm.init();
   fm.init_partition();
-  fm.dump_nets();
 
   end_time = std::chrono::steady_clock::now(); 
 
 
+  fm.dump_nets();
+  
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;  
   std::cout << "Run time: " 
     << elapsed_time.count()

@@ -22,29 +22,28 @@ public:
   // creates an initial partition for F-M to improve
   void init_partition();
 
-  std::vector<Net> nets;
-  std::unordered_map<uint64_t, std::vector<Net>> cell_to_nets;
- 
-  // TODO:
-  // should probably use an additional vector to maintain partition ids
-  std::vector<uint64_t> cell_partition_ids;
+  // checks if moving a cell respects the balance criterion
+  bool is_move_balanced(uint64_t cell_id);
 
-  std::vector<int64_t> FS;
-  std::vector<int64_t> TE;
+  std::vector<Net> nets;
+  std::vector<Cell> cells;
+  std::unordered_map<uint64_t, std::vector<uint64_t>> cell_to_nets;
+  std::unordered_map<uint64_t, std::vector<uint64_t>> net_to_cells;
+
+  double min_balance, max_balance;
 
   double balance_factor;
-  uint64_t cell_count = 0;
+  uint64_t cell_count = 0, net_count = 0;
 };
 
 
 struct Net {
+  Net();
   Net(uint64_t id);
-   
-  std::vector<Cell> cells;
   uint64_t id;
   
-
-  bool is_cut() const;
+  bool is_cut;
+  void update_is_cut(FMPartition& fm);
 };
 
 struct Cell {
@@ -52,7 +51,10 @@ struct Cell {
   Cell(uint64_t id);
   
   uint64_t id;
+  int partition_id;
 };
+
+
 
 
 
