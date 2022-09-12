@@ -15,12 +15,14 @@ int main(int argc, char* argv[]) {
   fm.read_netlist_file(argv[1]);
   fm.init();
   fm.init_partition();
+  
+
 
   end_time = std::chrono::steady_clock::now(); 
 
-
   fm.dump_nets();
-  
+  std::cout << "Cut size: " << fm.calc_cut() << "\n";
+
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;  
   std::cout << "Run time: " 
     << elapsed_time.count()

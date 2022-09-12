@@ -1,6 +1,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <ctime>
+#include <algorithm>
 #include "FMPartition.hpp"
 
 
@@ -68,6 +69,63 @@ Cell::Cell(uint64_t id) :
 
 }
 
+uint64_t Cell::fs(FMPartition& fm) {
+  uint64_t fs = 0;
+
+  auto& ns = fm.cell_to_nets[id];
+  
+  // visit each associated net to this cell
+  for (uint64_t net : ns) {
+    // is this net cut?
+    if (!fm.nets[net].is_cut) {
+      continue;
+    }
+
+    // is this net connected to another cell in
+    // the same partition as this cell?
+    auto& cs = fm.net_to_cells[fm.nets[net].id];
+    bool net_connected_to_multcells = false;
+    for (uint64_t cell : cs) {
+      if (cell != id && fm.cells[cell].partition_id == partition_id) {
+        net_connected_to_multcells = true;
+        break;
+      }
+    }
+
+    if (net_connected_to_multcells) {
+      continue;
+    }
+    else {
+      // we found a cut net
+      // that only connects to this cell 
+      // [in the same partition]
+      fs++;
+    }
+  }
+
+  return fs;
+
+}
+
+uint64_t Cell::te(FMPartition& fm) {
+  // simply uncut nets connected to this cell
+  uint64_t te = 0;
+  
+  auto& ns = fm.cell_to_nets[id];
+  for (auto& net : ns) {
+    if (!fm.nets[net].is_cut) {
+      te++;
+    }
+  }
+
+  return te;
+}
+
+GainBucket::GainBucket(int64_t cell_id) :
+  cell_id(cell_id)
+{
+
+}
 
 FMPartition::FMPartition() {
 
@@ -149,6 +207,7 @@ void FMPartition::init_partition() {
     cells[i].partition_id = std::rand() & 1;
   }
 
+
   // update cut/uncut
   for (uint64_t i = 0; i < net_count; i++) {
     nets[i].update_is_cut(*this);
@@ -156,17 +215,47 @@ void FMPartition::init_partition() {
 
 }
 
+uint64_t FMPartition::calc_cut() {
+  uint64_t cut = 0;
+  for (auto& n : nets) {
+    uint64_t cell_cnt0 = 0, cell_cnt1 = 0;
+    
+    auto& cs = net_to_cells[n.id];
+    for (auto& c : cs) {
+      if (cells[c].partition_id == 0) {
+        cell_cnt0++;
+      }
+    }
+    cell_cnt1 = cell_count - cell_cnt0;
+
+    cut += std::min(cell_cnt0, cell_cnt1);
+  }
+
+  return cut;
+}
+
+
+
+void FMPartition::init_gainbucket() {
+  // TODO: for now pmax = no. of nets 
+  // but in class I recall another pmax mentioned
+  for (uint64_t i = 0; i < 2 * net_count + 1; i++) {
+    gain_bucket.push_back(new GainBucket(-1));
+  }
+}
 
 void FMPartition::dump_nets() {
+  
   for (const auto& e : cell_to_nets) {
     std::cout << "Cell " << e.first << " | Partition: " << cells[e.first].partition_id << "| nets: ";
     for (auto& n : e.second) {
-      std::cout << "[" << n << "|" << nets[n].is_cut << "]";
+      std::cout << "[" << n << "|" << nets[n].is_cut << "]" << "\t";
     }
     std::cout << "\n";
   }
-
   
+
+  /*
   for (auto& e : net_to_cells) {
     std::cout << "Net " << e.first << " | cells: ";
     for (auto& n : e.second) {
@@ -174,9 +263,16 @@ void FMPartition::dump_nets() {
     }
     std::cout << "\n";
   }
+  */
+
+  for (auto& c : cells) {
+    std::cout << "cell " << c.id << ": " << c.te(*this) << "\n";
+  }
   
+ 
+   
   
-  std::cout << "balance_factor: " << balance_factor << "\n";
+  // std::cout << "balance_factor: " << balance_factor << "\n";
   std::cout << "min_balance: " << min_balance << " ,max_balance: " << max_balance << "\n";
   std::cout << "cell_count: " << cell_count << "\n";
   std::cout << "net_count: " << net_count << "\n";

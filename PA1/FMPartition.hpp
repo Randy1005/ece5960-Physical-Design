@@ -8,6 +8,8 @@ namespace FMPartition {
 
 struct Cell;
 struct Net;
+struct GainBucket;
+
 class FMPartition {
 public:
   FMPartition();
@@ -22,11 +24,18 @@ public:
   // creates an initial partition for F-M to improve
   void init_partition();
 
+  // initialize bucket gain list
+  void init_gainbucket();
+
   // checks if moving a cell respects the balance criterion
   bool is_move_balanced(uint64_t cell_id);
 
+  // cut size
+  uint64_t calc_cut();
+
   std::vector<Net> nets;
   std::vector<Cell> cells;
+  std::vector<GainBucket*> gain_bucket;
   std::unordered_map<uint64_t, std::vector<uint64_t>> cell_to_nets;
   std::unordered_map<uint64_t, std::vector<uint64_t>> net_to_cells;
 
@@ -50,11 +59,19 @@ struct Cell {
   Cell();
   Cell(uint64_t id);
   
+  uint64_t fs(FMPartition& fm);
+  uint64_t te(FMPartition& fm);
+
   uint64_t id;
   int partition_id;
 };
 
-
+struct GainBucket {
+  int64_t cell_id;
+  struct GainBucket* prev, *next;
+  
+  GainBucket(int64_t cell_id);
+};
 
 
 
