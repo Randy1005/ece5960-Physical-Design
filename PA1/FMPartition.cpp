@@ -347,17 +347,7 @@ void FMPartition::init_gainbucket() {
     // map this gain to the gain bucket index
     // positive gain: bucket index = pmax - gain
     // negative gain: bucket index = (2 * pmax + 1) - abs(gain)
-    /*
-    if (gain >= 0) {
-      gain_bucket[pmax - gain].insert_back(c.id);
-    } 
-    else {
-      gain_bucket[31 - std::abs(gain)].insert_back(c.id);
-    }
-    */
     gain_bucket[pmax - gain].insert_back(c.id);
-    
-      
   }
 }
 
