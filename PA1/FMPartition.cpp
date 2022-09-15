@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <cassert>
 #include "FMPartition.hpp"
 
 
@@ -29,7 +30,7 @@ Net::Net() :
 }
 
 
-Net::Net(uint64_t id) :
+Net::Net(int64_t id) :
   id(id)
 {
   
@@ -45,7 +46,7 @@ void Net::update_is_cut(FMPartition& fm) {
   // this net is considered cut
   auto& cell_ids = fm.net_to_cells[id];
   
-  for (uint64_t i = 1; i < cell_ids.size(); i++) {
+  for (int64_t i = 1; i < cell_ids.size(); i++) {
     if (fm.cells[cell_ids[i]].partition_id != fm.cells[cell_ids[0]].partition_id) {
       is_cut = true;
       return;
@@ -63,19 +64,19 @@ Cell::Cell() :
 
 }
 
-Cell::Cell(uint64_t id) :
+Cell::Cell(int64_t id) :
   id(id)
 {
 
 }
 
-uint64_t Cell::fs(FMPartition& fm) {
-  uint64_t fs = 0;
+int64_t Cell::fs(FMPartition& fm) {
+  int64_t fs = 0;
 
   auto& ns = fm.cell_to_nets[id];
   
   // visit each associated net to this cell
-  for (uint64_t net : ns) {
+  for (int64_t net : ns) {
     // is this net cut?
     if (!fm.nets[net].is_cut) {
       continue;
@@ -85,7 +86,7 @@ uint64_t Cell::fs(FMPartition& fm) {
     // the same partition as this cell?
     auto& cs = fm.net_to_cells[fm.nets[net].id];
     bool net_connected_to_multcells = false;
-    for (uint64_t cell : cs) {
+    for (int64_t cell : cs) {
       if (cell != id && fm.cells[cell].partition_id == partition_id) {
         net_connected_to_multcells = true;
         break;
@@ -107,9 +108,9 @@ uint64_t Cell::fs(FMPartition& fm) {
 
 }
 
-uint64_t Cell::te(FMPartition& fm) {
+int64_t Cell::te(FMPartition& fm) {
   // simply uncut nets connected to this cell
-  uint64_t te = 0;
+  int64_t te = 0;
   
   auto& ns = fm.cell_to_nets[id];
   for (auto& net : ns) {
@@ -121,11 +122,105 @@ uint64_t Cell::te(FMPartition& fm) {
   return te;
 }
 
-GainBucket::GainBucket(int64_t cell_id) :
-  cell_id(cell_id)
+void Cell::update_gain(FMPartition& fm) {
+
+}
+
+GainBucketNode::GainBucketNode(int64_t cell_id) :
+  cell_id(cell_id),
+  next(nullptr),
+  prev(nullptr)
 {
 
 }
+
+GainBucketList::GainBucketList() :
+    head(nullptr),
+    tail(nullptr)
+{
+
+}
+
+GainBucketList::~GainBucketList() {
+
+}
+
+void GainBucketList::insert_back(int64_t cell_id) {
+  GainBucketNode* n = new GainBucketNode(cell_id);
+  
+  if (tail == nullptr) {
+    tail = head = n;
+    return;
+  }
+  
+  
+  if (tail->next == nullptr) {
+    tail->next = n;
+    n->prev = tail;
+    tail = n;
+  }
+
+}
+
+GainBucketNode* GainBucketList::remove(int64_t cell_id) { 
+  GainBucketNode* curr = head;
+
+  while (curr != nullptr) {
+    if (curr->cell_id == cell_id) {
+      if (curr == head) {
+        head = curr->next;
+      }
+      else {
+        curr->prev->next = curr->next;
+        curr->next->prev = curr->prev;
+      }
+
+
+      curr->prev = nullptr;
+      curr->next = nullptr;
+      return curr;
+    }
+    curr = curr->next;
+  }
+
+  std::cerr << "no node with cell_id: " << cell_id << " exists.\n";
+  return nullptr;
+}
+
+void GainBucketList::move_to_back(GainBucketNode** n) {
+  if (tail == nullptr) {
+    tail = head = *n;
+    return;
+  }
+  
+  
+  if (tail->next == nullptr) {
+    tail->next = *n;
+    (*n)->prev = tail;
+    tail = *n;
+  }
+}
+
+GainBucketNode* GainBucketList::pop_front() {
+  GainBucketNode* tmp = head;
+  head = tmp->next;
+
+  tmp->next = nullptr;
+  tmp->prev = nullptr;
+  return tmp;
+}
+
+void GainBucketList::dump(std::ostream& os) const {
+  GainBucketNode* curr = head;
+  while (curr != nullptr) {
+    os << curr->cell_id << " ";
+    curr = curr->next;
+  }
+  os << "\n";
+}
+
+
+
 
 FMPartition::FMPartition() {
 
@@ -159,7 +254,7 @@ void FMPartition::read_netlist_file(const std::string& inputFileName) {
         // first string is net id, e.g. n1, n13 etc.
         ifs >> buffer;
         if (buffer[0] == 'c') {
-          uint64_t cell = stoul(buffer.substr(1));
+          int64_t cell = stoul(buffer.substr(1));
           if (cell > cell_count) {
             cell_count = cell;
           }
@@ -184,12 +279,12 @@ void FMPartition::init() {
   else {
       
     cells.resize(cell_count);
-    for (uint64_t i = 0; i < cell_count; i++) {
+    for (int64_t i = 0; i < cell_count; i++) {
       cells[i] = Cell(i);
     }
 
     nets.resize(net_count);
-    for (uint64_t i = 0; i < net_count; i++) {
+    for (int64_t i = 0; i < net_count; i++) {
       nets[i] = Net(i);
     }
 
@@ -203,22 +298,22 @@ void FMPartition::init_partition() {
   // TODO:
   // random assignment for now
   // how to improve it?
-  for (uint64_t i = 0; i < cell_count; i++) {
+  for (int64_t i = 0; i < cell_count; i++) {
     cells[i].partition_id = std::rand() & 1;
   }
 
 
   // update cut/uncut
-  for (uint64_t i = 0; i < net_count; i++) {
+  for (int64_t i = 0; i < net_count; i++) {
     nets[i].update_is_cut(*this);
   }
 
 }
 
-uint64_t FMPartition::calc_cut() {
-  uint64_t cut = 0;
+int64_t FMPartition::calc_cut() {
+  int64_t cut = 0;
   for (auto& n : nets) {
-    uint64_t cell_cnt0 = 0, cell_cnt1 = 0;
+    int64_t cell_cnt0 = 0, cell_cnt1 = 0;
     
     auto& cs = net_to_cells[n.id];
     for (auto& c : cs) {
@@ -239,8 +334,30 @@ uint64_t FMPartition::calc_cut() {
 void FMPartition::init_gainbucket() {
   // TODO: for now pmax = no. of nets 
   // but in class I recall another pmax mentioned
-  for (uint64_t i = 0; i < 2 * net_count + 1; i++) {
-    gain_bucket.push_back(new GainBucket(-1));
+  // gain_bucket.resize(2 * net_count + 1);
+  gain_bucket.resize(2 * pmax + 1);
+
+  // populate the initial gain bucket list
+  for (auto& c : cells) {
+    
+    int64_t gain = c.fs(*this) - c.te(*this);
+    c.gain = gain;
+    curr_max_gain = std::max(gain, curr_max_gain);
+     
+    // map this gain to the gain bucket index
+    // positive gain: bucket index = pmax - gain
+    // negative gain: bucket index = (2 * pmax + 1) - abs(gain)
+    /*
+    if (gain >= 0) {
+      gain_bucket[pmax - gain].insert_back(c.id);
+    } 
+    else {
+      gain_bucket[31 - std::abs(gain)].insert_back(c.id);
+    }
+    */
+    gain_bucket[pmax - gain].insert_back(c.id);
+    
+      
   }
 }
 
