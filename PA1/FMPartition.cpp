@@ -24,15 +24,17 @@ Net::Net(int64_t id) :
 // updates cut/uncut
 void Net::update_is_cut(FMPartition& fm) {
   // TODO:
-  // could possibly be optimized by maintaining if we moved
-  // associated cell or not
-  
+  // maintain a cell count for both sides
+  // for each net
+  // if both of the count != 0
+  // then this net is cut
+
   // if any one of the cells belongs to another partition
   // this net is considered cut
   auto& cell_ids = fm.net_to_cells[id];
   
   for (int64_t i = 1; i < cell_ids.size(); i++) {
-    if (fm.cells[cell_ids[i]].partition_id != fm.cells[cell_ids[0]].partition_id) {
+    if (fm.cells[cell_ids[i]].partition_id ^ fm.cells[cell_ids[0]].partition_id) {
       is_cut = true;
       return;
     }   
@@ -311,17 +313,9 @@ void FMPartition::init_partition() {
 int64_t FMPartition::calc_cut() {
   int64_t cut = 0;
   for (auto& n : nets) {
-    int64_t cell_cnt0 = 0, cell_cnt1 = 0;
-    
-    auto& cs = net_to_cells[n.id];
-    for (auto& c : cs) {
-      if (cells[c].partition_id == 0) {
-        cell_cnt0++;
-      }
-    }
-    cell_cnt1 = cell_count - cell_cnt0;
-
-    cut += std::min(cell_cnt0, cell_cnt1);
+    if (n.is_cut) {
+      cut++;
+    }    
   }
 
   return cut;
@@ -401,6 +395,7 @@ int64_t FMPartition::fm_pass() {
     // lock this cell
     cells[node->cell_id].locked = true;
     locked_cell_cnt++;
+    
 
     // calculate F(net) and T(net)
     // before-move and after-move
@@ -455,26 +450,16 @@ int64_t FMPartition::fm_pass() {
           }
         }
       }
-    }
-    
-    // make the move
-    cells[node->cell_id].partition_id = !cells[node->cell_id].partition_id;
 
-    // F(net)
-    for (auto& n : ns) {
-      // in from_partition, how many cells
-      // are connected to net n?
-      auto& cs = net_to_cells[n];
-      int64_t F_n = 0;
-      for (auto& c : cs) {
-        if (cells[c].partition_id == from_part) {
-          F_n++;
-          if (F_n > 1) {
-            break;
-          }
-        }
-      }
-
+      // derive F(net) from T(net)
+      // F(net) = cell_connected_to_net - T(net)
+      int64_t F_n = cs.size() - T_n;
+      
+      // change net distribution to reflect the move
+      F_n--;
+      T_n++;
+      
+      
       if (F_n > 1) {
         continue;
       }
@@ -507,16 +492,33 @@ int64_t FMPartition::fm_pass() {
         }
       }
 
-    }
-   
+    } 
+
+    cells[node->cell_id].partition_id = !cells[node->cell_id].partition_id;
+  } 
+
+
+
+  /*
+  std::cout << "best move: " << max_gain_seq << "\n";
+  for (int i = 0; i < move_order.size(); i++) {
+    std::cout << move_order[i] << ", ";
   }
+  std::cout << "\n";
+  */
+
 
   // get the best move sequence
-  // now let make the actual moves
+  // now make the actual moves
   cells = tmp_cells;
   for (int64_t i = 0; i < max_gain_seq; i++) {
     int64_t order = move_order[i];
     cells[order].partition_id = !cells[order].partition_id;
+  }
+
+  // update uncut/cut for nets
+  for (auto&n : nets) {
+    n.update_is_cut(*this);
   }
    
   return calc_cut();
@@ -525,9 +527,11 @@ int64_t FMPartition::fm_pass() {
 int64_t FMPartition::fm_full_pass() {
   init();
   init_partition();
+  init_gainbucket();
 
   int64_t cut_size = calc_cut();
   int64_t last_cut;
+  /*
   do {
     // set all cells to free
     for (int64_t i = 0; i < cells.size(); i++) {
@@ -539,7 +543,8 @@ int64_t FMPartition::fm_full_pass() {
     last_cut = cut_size;
     cut_size = fm_pass();
   } while (cut_size < last_cut);
-
+  */
+  last_cut = fm_pass();
   return last_cut;
 }
 

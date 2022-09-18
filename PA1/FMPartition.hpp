@@ -7,7 +7,7 @@
 
 namespace FMPartition {
 
-const int64_t pmax = 50;
+const int64_t pmax = 100;
 
 struct Cell;
 struct Net;
