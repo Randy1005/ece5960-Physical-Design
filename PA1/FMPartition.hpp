@@ -7,7 +7,7 @@
 
 namespace FMPartition {
 
-const int64_t pmax = 15;
+const int64_t pmax = 50;
 
 struct Cell;
 struct Net;
@@ -30,12 +30,23 @@ public:
 
   // initialize bucket gain list
   void init_gainbucket();
+  
+  // performs one pass of improvement
+  // returns cut size
+  int64_t fm_pass();
+
+  int64_t fm_full_pass();
+
+  void write_result(const std::string& output_file);
 
   // checks if moving a cell respects the balance criterion
   bool is_move_balanced(int64_t cell_id);
 
   // cut size
   int64_t calc_cut();
+
+  std::vector<int64_t> acc_gain;
+  std::vector<int64_t> move_order;
 
   std::vector<Net> nets;
   std::vector<Cell> cells;
@@ -50,6 +61,7 @@ public:
   double balance_factor;
   int64_t curr_max_gain = 0;
   int64_t cell_count = 0, net_count = 0;
+  int64_t part0_cell_count = 0, part1_cell_count = 1;
 };
 
 
@@ -73,7 +85,8 @@ struct Cell {
   int64_t id;
   // cache its gain value
   int64_t gain;
-  int partition_id;
+  bool locked;
+  bool partition_id;
 };
 
 struct GainBucketNode {

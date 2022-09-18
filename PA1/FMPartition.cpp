@@ -8,21 +8,6 @@
 
 namespace FMPartition {
 
-static unsigned long x=123456789, y=362436069, z=521288629;
-unsigned long xorshf96(void) {          //period 2^96-1
-unsigned long t;
-    x ^= x << 16;
-    x ^= x >> 5;
-    x ^= x << 1;
-
-   t = x;
-   x = y;
-   y = z;
-   z = t ^ x ^ y;
-
-  return z;
-}
-
 Net::Net() :
   id(0)
 {
@@ -65,7 +50,8 @@ Cell::Cell() :
 }
 
 Cell::Cell(int64_t id) :
-  id(id)
+  id(id),
+  locked(0)
 {
 
 }
@@ -170,6 +156,10 @@ GainBucketNode* GainBucketList::remove(int64_t cell_id) {
       if (curr == head) {
         head = curr->next;
       }
+      else if (curr == tail) {
+        tail = curr->prev;
+        curr->prev->next = nullptr;
+      }
       else {
         curr->prev->next = curr->next;
         curr->next->prev = curr->prev;
@@ -178,6 +168,7 @@ GainBucketNode* GainBucketList::remove(int64_t cell_id) {
 
       curr->prev = nullptr;
       curr->next = nullptr;
+
       return curr;
     }
     curr = curr->next;
@@ -188,7 +179,7 @@ GainBucketNode* GainBucketList::remove(int64_t cell_id) {
 }
 
 void GainBucketList::move_to_back(GainBucketNode** n) {
-  if (tail == nullptr) {
+  if (tail == nullptr || head == nullptr) {
     tail = head = *n;
     return;
   }
@@ -295,12 +286,19 @@ void FMPartition::init() {
 }
 
 void FMPartition::init_partition() {
-  // TODO:
-  // random assignment for now
-  // how to improve it?
-  for (int64_t i = 0; i < cell_count; i++) {
-    cells[i].partition_id = std::rand() & 1;
+  // to satisfy the balance constraint
+  // I simply assign the first half to one partition
+  // and the other half to the other
+  for (int64_t i = 0; i < (cell_count / 2); i++) {
+    cells[i].partition_id = 0;
   }
+
+  for (int64_t i = (cell_count / 2); i < cell_count; i++) {
+    cells[i].partition_id = 1;
+  }
+
+  part0_cell_count = cell_count / 2;
+  part1_cell_count = cell_count - part0_cell_count;
 
 
   // update cut/uncut
@@ -329,14 +327,284 @@ int64_t FMPartition::calc_cut() {
   return cut;
 }
 
+int64_t FMPartition::fm_pass() {
+  int64_t locked_cell_cnt = 0;
+
+
+  int64_t max_gain_seq = 0;
+  int64_t max_accu_gain = 0;
+  int64_t curr_accu_gain = 0;
+  
+  // copy cells to a tmp container
+  std::vector<Cell> tmp_cells = cells;
+  
+  while (locked_cell_cnt < cell_count) {
+    // navigate the the max gain bucket
+    int64_t max_gain_bucket_index = 0;
+
+    bool base_cell_found = false;
+    GainBucketNode* node;
+    while (!base_cell_found) {
+      if (!gain_bucket[max_gain_bucket_index].head) {
+        max_gain_bucket_index++;
+        continue;
+      }
+      
+      // found a max gain bucket
+      // see if there's a cell that fits the balance
+      // criterion
+      node = gain_bucket[max_gain_bucket_index].head;
+      while (!is_move_balanced(node->cell_id)) {
+        node = node->next;
+      }
+
+      if (!node) {
+        // all the cells in this bucket
+        // does not fit the balance criterion
+        max_gain_bucket_index++;
+        continue;
+      } else {
+         
+        // remove this node from the bucket
+        if (node == gain_bucket[max_gain_bucket_index].head) {
+          gain_bucket[max_gain_bucket_index].pop_front();
+        } else {
+          if (node == gain_bucket[max_gain_bucket_index].tail) {
+            gain_bucket[max_gain_bucket_index].tail = node->prev;
+            node->prev->next = nullptr;
+          }
+          else {
+            node->prev->next = node->next;
+            node->next->prev = node->prev;
+          }
+          node->next = node->prev = nullptr;
+        }
+
+        base_cell_found = true;
+      }
+    }
+    
+
+    // record the move order 
+    // and gain
+    move_order.push_back(node->cell_id);
+    if (cells[node->cell_id].gain < 0) {
+      curr_accu_gain -= std::abs(cells[node->cell_id].gain);
+    } else {
+      if (curr_accu_gain + cells[node->cell_id].gain > max_accu_gain) {
+        max_accu_gain = curr_accu_gain + cells[node->cell_id].gain;
+        max_gain_seq = locked_cell_cnt;
+      }
+      curr_accu_gain += cells[node->cell_id].gain;
+    }
+
+    // lock this cell
+    cells[node->cell_id].locked = true;
+    locked_cell_cnt++;
+
+    // calculate F(net) and T(net)
+    // before-move and after-move
+    // to identify critical nets
+    bool from_part = cells[node->cell_id].partition_id;
+    bool to_part = !from_part;
+    
+    auto& ns = cell_to_nets[node->cell_id];
+    for (auto& n : ns) {
+      // in to_partition, how many cells
+      // are connected to net n?
+      auto& cs = net_to_cells[n];
+      int64_t T_n = 0;
+      for (auto& c : cs) {
+        if (cells[c].partition_id == to_part) {
+          T_n++;
+          if (T_n > 1) {
+            break;
+          }
+        }
+      }
+
+      if (T_n > 1) {
+        continue;
+      }
+
+      // if T(net) == 0
+      // increment gains of all free cells
+      // connected to net n
+      //
+      // if T(net) == 1
+      // only decrement that one cell's gain
+      // and only if it's free
+      
+      if (T_n == 0) {
+        for (auto& c : cs) {
+          if (!cells[c].locked) {
+            // move to its corresponding bucket
+            GainBucketNode* n = gain_bucket[pmax - cells[c].gain].remove(c);
+            cells[c].gain++;
+            gain_bucket[pmax - cells[c].gain].move_to_back(&n);
+          }
+        }
+      } else if (T_n == 1) {
+        for (auto& c : cs) {
+          if (cells[c].partition_id == to_part && !cells[c].locked) {
+            // move to its corresponding bucket
+            GainBucketNode* n = gain_bucket[pmax - cells[c].gain].remove(c);
+            cells[c].gain--;
+            gain_bucket[pmax - cells[c].gain].move_to_back(&n);
+            break;
+          }
+        }
+      }
+    }
+    
+    // make the move
+    cells[node->cell_id].partition_id = !cells[node->cell_id].partition_id;
+
+    // F(net)
+    for (auto& n : ns) {
+      // in from_partition, how many cells
+      // are connected to net n?
+      auto& cs = net_to_cells[n];
+      int64_t F_n = 0;
+      for (auto& c : cs) {
+        if (cells[c].partition_id == from_part) {
+          F_n++;
+          if (F_n > 1) {
+            break;
+          }
+        }
+      }
+
+      if (F_n > 1) {
+        continue;
+      }
+
+      // if F(net) == 0
+      // decrement gains of all free cells
+      // connected to net n
+      //
+      // if F(net) == 1
+      // only increment that one cell's gain
+      // and only if it's free
+      if (F_n == 0) {
+        for (auto& c : cs) {
+          if (!cells[c].locked) {
+            // move to its corresponding bucket
+            GainBucketNode* n = gain_bucket[pmax - cells[c].gain].remove(c);
+            cells[c].gain--;
+            gain_bucket[pmax - cells[c].gain].move_to_back(&n);
+          }
+        }
+      } else if (F_n == 1) {
+        for (auto& c : cs) {
+          if (cells[c].partition_id == from_part && !cells[c].locked) {
+            // move to its corresponding bucket
+            GainBucketNode* n = gain_bucket[pmax - cells[c].gain].remove(c);
+            cells[c].gain++;
+            gain_bucket[pmax - cells[c].gain].move_to_back(&n);
+            break;
+          }
+        }
+      }
+
+    }
+   
+  }
+
+  // get the best move sequence
+  // now let make the actual moves
+  cells = tmp_cells;
+  for (int64_t i = 0; i < max_gain_seq; i++) {
+    int64_t order = move_order[i];
+    cells[order].partition_id = !cells[order].partition_id;
+  }
+   
+  return calc_cut();
+}
+
+int64_t FMPartition::fm_full_pass() {
+  init();
+  init_partition();
+
+  int64_t cut_size = calc_cut();
+  int64_t last_cut;
+  do {
+    // set all cells to free
+    for (int64_t i = 0; i < cells.size(); i++) {
+      cells[i].locked = false;
+      cells[i].gain = 0;
+    }
+
+    init_gainbucket();
+    last_cut = cut_size;
+    cut_size = fm_pass();
+  } while (cut_size < last_cut);
+
+  return last_cut;
+}
+
+void FMPartition::write_result(const std::string& output_file) {
+  std::ofstream ofs;
+  ofs.open(output_file);
+  
+  int64_t cut_size = fm_full_pass();
+  ofs << "Cutsize = " << cut_size << "\n";
+  
+  int64_t g1_size = 0, g2_size = 0;
+  std::vector<int64_t> g1, g2;
+  for (int64_t i = 0; i < cells.size(); i++) {
+    if (!cells[i].partition_id) {
+      g1_size++;
+      g1.push_back(cells[i].id);
+    } else {
+      g2_size++;
+      g2.push_back(cells[i].id);
+    }
+  }
+
+  ofs << "G1 " << g1_size << "\n";
+  for (int64_t i = 0; i < g1_size; i++) {
+    ofs << "c" << g1[i] + 1 << " ";
+  }
+  ofs << ";\n";
+  ofs << "G2 " << g2_size << "\n";
+
+  for (int64_t i = 0; i < g2_size; i++) {
+    ofs << "c" << g2[i] + 1 << " ";
+  }
+  ofs << ";\n";
+}
+
+bool FMPartition::is_move_balanced(int64_t cell_id) {
+  if (cells[cell_id].partition_id == 0) {
+    // meaning we're moving it to partition block 1
+    int part0 = part0_cell_count - 1;
+    int part1 = part1_cell_count + 1;
+    if (part0 < min_balance || part1 > max_balance) {
+      return false;
+    }
+  }
+  else {
+    // we're moving it to partition block 0
+    int part0 = part0_cell_count + 1;
+    int part1 = part1_cell_count - 1;
+    if (part1 < min_balance || part0 > max_balance) {
+      return false;
+    }
+  }
+
+  return true;
+}
 
 
 void FMPartition::init_gainbucket() {
-  // TODO: for now pmax = no. of nets 
+ 
+  gain_bucket.clear();
+  // TODO: for now pmax = 15 
   // but in class I recall another pmax mentioned
   // gain_bucket.resize(2 * net_count + 1);
   gain_bucket.resize(2 * pmax + 1);
-
+  
   // populate the initial gain bucket list
   for (auto& c : cells) {
     
