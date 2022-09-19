@@ -15,7 +15,7 @@ Net::Net() :
 }
 
 
-Net::Net(int64_t id) :
+Net::Net(int id) :
   id(id)
 {
   
@@ -33,7 +33,7 @@ void Net::update_is_cut(FMPartition& fm) {
   // this net is considered cut
   auto& cell_ids = fm.net_to_cells[id];
   
-  for (int64_t i = 1; i < cell_ids.size(); i++) {
+  for (int i = 1; i < cell_ids.size(); i++) {
     if (fm.cells[cell_ids[i]].partition_id ^ fm.cells[cell_ids[0]].partition_id) {
       is_cut = true;
       return;
@@ -51,20 +51,20 @@ Cell::Cell() :
 
 }
 
-Cell::Cell(int64_t id) :
+Cell::Cell(int id) :
   id(id),
   locked(0)
 {
 
 }
 
-int64_t Cell::fs(FMPartition& fm) {
-  int64_t fs = 0;
+int Cell::fs(FMPartition& fm) {
+  int fs = 0;
 
   auto& ns = fm.cell_to_nets[id];
   
   // visit each associated net to this cell
-  for (int64_t net : ns) {
+  for (int net : ns) {
     // is this net cut?
     if (!fm.nets[net].is_cut) {
       continue;
@@ -74,7 +74,7 @@ int64_t Cell::fs(FMPartition& fm) {
     // the same partition as this cell?
     auto& cs = fm.net_to_cells[fm.nets[net].id];
     bool net_connected_to_multcells = false;
-    for (int64_t cell : cs) {
+    for (int cell : cs) {
       if (cell != id && fm.cells[cell].partition_id == partition_id) {
         net_connected_to_multcells = true;
         break;
@@ -96,9 +96,9 @@ int64_t Cell::fs(FMPartition& fm) {
 
 }
 
-int64_t Cell::te(FMPartition& fm) {
+int Cell::te(FMPartition& fm) {
   // simply uncut nets connected to this cell
-  int64_t te = 0;
+  int te = 0;
   
   auto& ns = fm.cell_to_nets[id];
   for (auto& net : ns) {
@@ -114,7 +114,7 @@ void Cell::update_gain(FMPartition& fm) {
 
 }
 
-GainBucketNode::GainBucketNode(int64_t cell_id) :
+GainBucketNode::GainBucketNode(int cell_id) :
   cell_id(cell_id),
   next(nullptr),
   prev(nullptr)
@@ -133,7 +133,7 @@ GainBucketList::~GainBucketList() {
 
 }
 
-void GainBucketList::insert_back(int64_t cell_id) {
+void GainBucketList::insert_back(int cell_id) {
   GainBucketNode* n = new GainBucketNode(cell_id);
   
   if (tail == nullptr) {
@@ -150,7 +150,7 @@ void GainBucketList::insert_back(int64_t cell_id) {
 
 }
 
-GainBucketNode* GainBucketList::remove(int64_t cell_id) { 
+GainBucketNode* GainBucketList::remove(int cell_id) { 
   GainBucketNode* curr = head;
 
   while (curr != nullptr) {
@@ -247,7 +247,7 @@ void FMPartition::read_netlist_file(const std::string& inputFileName) {
         // first string is net id, e.g. n1, n13 etc.
         ifs >> buffer;
         if (buffer[0] == 'c') {
-          int64_t cell = stoul(buffer.substr(1));
+          int cell = stoul(buffer.substr(1));
           if (cell > cell_count) {
             cell_count = cell;
           }
@@ -272,12 +272,12 @@ void FMPartition::init() {
   else {
       
     cells.resize(cell_count);
-    for (int64_t i = 0; i < cell_count; i++) {
+    for (int i = 0; i < cell_count; i++) {
       cells[i] = Cell(i);
     }
 
     nets.resize(net_count);
-    for (int64_t i = 0; i < net_count; i++) {
+    for (int i = 0; i < net_count; i++) {
       nets[i] = Net(i);
     }
 
@@ -291,27 +291,26 @@ void FMPartition::init_partition() {
   // to satisfy the balance constraint
   // I simply assign the first half to one partition
   // and the other half to the other
-  for (int64_t i = 0; i < (cell_count / 2); i++) {
+  for (int i = 0; i < (cell_count / 2); i++) {
     cells[i].partition_id = 0;
   }
 
-  for (int64_t i = (cell_count / 2); i < cell_count; i++) {
+  for (int i = (cell_count / 2); i < cell_count; i++) {
     cells[i].partition_id = 1;
   }
 
   part0_cell_count = cell_count / 2;
   part1_cell_count = cell_count - part0_cell_count;
 
-
   // update cut/uncut
-  for (int64_t i = 0; i < net_count; i++) {
+  for (int i = 0; i < net_count; i++) {
     nets[i].update_is_cut(*this);
   }
 
 }
 
-int64_t FMPartition::calc_cut() {
-  int64_t cut = 0;
+int FMPartition::calc_cut() {
+  int cut = 0;
   for (auto& n : nets) {
     if (n.is_cut) {
       cut++;
@@ -321,20 +320,20 @@ int64_t FMPartition::calc_cut() {
   return cut;
 }
 
-int64_t FMPartition::fm_pass() {
-  int64_t locked_cell_cnt = 0;
+int FMPartition::fm_pass() {
+  int locked_cell_cnt = 0;
 
 
-  int64_t max_gain_seq = 0;
-  int64_t max_accu_gain = 0;
-  int64_t curr_accu_gain = 0;
+  int max_gain_seq = 0;
+  int max_accu_gain = 0;
+  int curr_accu_gain = 0;
   
   // copy cells to a tmp container
   std::vector<Cell> tmp_cells = cells;
   
   while (locked_cell_cnt < cell_count) {
     // navigate the the max gain bucket
-    int64_t max_gain_bucket_index = 0;
+    int max_gain_bucket_index = 0;
 
     bool base_cell_found = false;
     GainBucketNode* node;
@@ -343,39 +342,23 @@ int64_t FMPartition::fm_pass() {
         max_gain_bucket_index++;
         continue;
       }
-      
       // found a max gain bucket
       // see if there's a cell that fits the balance
       // criterion
       node = gain_bucket[max_gain_bucket_index].head;
-      while (!is_move_balanced(node->cell_id)) {
-        node = node->next;
-      }
-
-      if (!node) {
-        // all the cells in this bucket
-        // does not fit the balance criterion
-        max_gain_bucket_index++;
-        continue;
-      } else {
-         
-        // remove this node from the bucket
-        if (node == gain_bucket[max_gain_bucket_index].head) {
-          gain_bucket[max_gain_bucket_index].pop_front();
-        } else {
-          if (node == gain_bucket[max_gain_bucket_index].tail) {
-            gain_bucket[max_gain_bucket_index].tail = node->prev;
-            node->prev->next = nullptr;
-          }
-          else {
-            node->prev->next = node->next;
-            node->next->prev = node->prev;
-          }
-          node->next = node->prev = nullptr;
+      do {
+        if (is_move_balanced(node->cell_id)) {
+          // remove this node from the bucket
+          gain_bucket[max_gain_bucket_index].remove(node->cell_id);
+          base_cell_found = true;
+          break;
         }
-
-        base_cell_found = true;
-      }
+          
+        // std::cout << node->cell_id << "\n";
+        node = node->next;
+      } while (node != nullptr);
+      
+      max_gain_bucket_index++;
     }
     
 
@@ -408,7 +391,7 @@ int64_t FMPartition::fm_pass() {
       // in to_partition, how many cells
       // are connected to net n?
       auto& cs = net_to_cells[n];
-      int64_t T_n = 0;
+      int T_n = 0;
       for (auto& c : cs) {
         if (cells[c].partition_id == to_part) {
           T_n++;
@@ -453,7 +436,7 @@ int64_t FMPartition::fm_pass() {
 
       // derive F(net) from T(net)
       // F(net) = cell_connected_to_net - T(net)
-      int64_t F_n = cs.size() - T_n;
+      int F_n = cs.size() - T_n;
       
       // change net distribution to reflect the move
       F_n--;
@@ -511,8 +494,18 @@ int64_t FMPartition::fm_pass() {
   // get the best move sequence
   // now make the actual moves
   cells = tmp_cells;
-  for (int64_t i = 0; i < max_gain_seq; i++) {
-    int64_t order = move_order[i];
+  part0_cell_count = cell_count / 2;
+  part1_cell_count = cell_count - part0_cell_count;
+
+  for (int i = 0; i < max_gain_seq; i++) {
+    int order = move_order[i];
+    if (!cells[order].partition_id) {
+      part0_cell_count--;
+      part1_cell_count++;
+    } else {
+      part1_cell_count--;
+      part0_cell_count++;
+    }
     cells[order].partition_id = !cells[order].partition_id;
   }
 
@@ -524,17 +517,16 @@ int64_t FMPartition::fm_pass() {
   return calc_cut();
 }
 
-int64_t FMPartition::fm_full_pass() {
+int FMPartition::fm_full_pass() {
   init();
   init_partition();
   init_gainbucket();
-
-  int64_t cut_size = calc_cut();
-  int64_t last_cut;
+  // commented code overwrites the prev
+  // valid solution
   /*
   do {
     // set all cells to free
-    for (int64_t i = 0; i < cells.size(); i++) {
+    for (int i = 0; i < cells.size(); i++) {
       cells[i].locked = false;
       cells[i].gain = 0;
     }
@@ -544,49 +536,58 @@ int64_t FMPartition::fm_full_pass() {
     cut_size = fm_pass();
   } while (cut_size < last_cut);
   */
-  last_cut = fm_pass();
-  return last_cut;
+  
+  return fm_pass();
 }
 
 void FMPartition::write_result(const std::string& output_file) {
   std::ofstream ofs;
   ofs.open(output_file);
   
-  int64_t cut_size = fm_full_pass();
+  int cut_size = calc_cut(); 
   ofs << "Cutsize = " << cut_size << "\n";
-  
-  int64_t g1_size = 0, g2_size = 0;
-  std::vector<int64_t> g1, g2;
-  for (int64_t i = 0; i < cells.size(); i++) {
+ 
+  std::cout << part0_cell_count << "\n";
+  std::cout << part1_cell_count << "\n";
+
+  std::vector<int> g0, g1;
+  int g0_cnt = 0, g1_cnt = 0; 
+  for (int i = 0; i < cells.size(); i++) {
     if (!cells[i].partition_id) {
-      g1_size++;
-      g1.push_back(cells[i].id);
+      g0.push_back(cells[i].id + 1);
     } else {
-      g2_size++;
-      g2.push_back(cells[i].id);
+      g1.push_back(cells[i].id + 1);
     }
   }
 
-  ofs << "G1 " << g1_size << "\n";
-  for (int64_t i = 0; i < g1_size; i++) {
-    ofs << "c" << g1[i] + 1 << " ";
+  ofs << "G1 " << g0.size() << "\n";
+  for (int i = 0; i < g0.size(); i++) {
+    ofs << "c" << g0[i] << " ";
   }
   ofs << ";\n";
-  ofs << "G2 " << g2_size << "\n";
+  ofs << "G2 " << g1.size() << "\n";
 
-  for (int64_t i = 0; i < g2_size; i++) {
-    ofs << "c" << g2[i] + 1 << " ";
+  for (int i = 0; i < g1.size(); i++) {
+    ofs << "c" << g1[i] << " ";
   }
   ofs << ";\n";
 }
 
-bool FMPartition::is_move_balanced(int64_t cell_id) {
-  if (cells[cell_id].partition_id == 0) {
+bool FMPartition::is_move_balanced(int cell_id) {
+  if (!cells[cell_id].partition_id) {
     // meaning we're moving it to partition block 1
     int part0 = part0_cell_count - 1;
     int part1 = part1_cell_count + 1;
+    
     if (part0 < min_balance || part1 > max_balance) {
       return false;
+    } else {
+      // std::cout << "moving to block 1\n";
+      // std::cout << "G1: " << part0_cell_count << "| G2: " << part1_cell_count << "\n";
+
+      part0_cell_count--;
+      part1_cell_count++;
+      return true;
     }
   }
   else {
@@ -596,9 +597,15 @@ bool FMPartition::is_move_balanced(int64_t cell_id) {
     if (part1 < min_balance || part0 > max_balance) {
       return false;
     }
+    else {
+      // std::cout << "moving to block 0\n";
+      // std::cout << "G1: " << part0_cell_count << "| G2: " << part1_cell_count << "\n";
+      part0_cell_count++;
+      part1_cell_count--;
+      return true;
+    }
   }
 
-  return true;
 }
 
 
@@ -613,7 +620,7 @@ void FMPartition::init_gainbucket() {
   // populate the initial gain bucket list
   for (auto& c : cells) {
     
-    int64_t gain = c.fs(*this) - c.te(*this);
+    int gain = c.fs(*this) - c.te(*this);
     c.gain = gain;
     curr_max_gain = std::max(gain, curr_max_gain);
      
@@ -625,7 +632,7 @@ void FMPartition::init_gainbucket() {
 }
 
 void FMPartition::dump_nets() {
-  
+  /* 
   for (const auto& e : cell_to_nets) {
     std::cout << "Cell " << e.first << " | Partition: " << cells[e.first].partition_id << "| nets: ";
     for (auto& n : e.second) {
@@ -633,6 +640,7 @@ void FMPartition::dump_nets() {
     }
     std::cout << "\n";
   }
+  */
   
 
   /*
@@ -644,11 +652,12 @@ void FMPartition::dump_nets() {
     std::cout << "\n";
   }
   */
-
+  
+  /*
   for (auto& c : cells) {
     std::cout << "cell " << c.id << ": " << c.te(*this) << "\n";
   }
-  
+  */
  
    
   

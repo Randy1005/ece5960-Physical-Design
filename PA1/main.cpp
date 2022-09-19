@@ -13,9 +13,12 @@ int main(int argc, char* argv[]) {
   start_time = std::chrono::steady_clock::now(); 
 
   fm.read_netlist_file(argv[1]); 
-  fm.write_result(argv[2]);
-
+  int cut = fm.fm_full_pass();
   end_time = std::chrono::steady_clock::now(); 
+  
+  std::cout << "cut size: " << cut << "\n";
+  fm.write_result(argv[2]);
+  fm.dump_nets();
 
 
 
