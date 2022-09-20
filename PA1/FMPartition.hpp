@@ -20,39 +20,35 @@ public:
  
   // for convenience, I also get the cell count while reading from file
   void read_netlist_file(const std::string& inputFileName);
-
+  
   void init();
-
   void dump_nets();
-
+  
   // creates an initial partition for F-M to improve
   void init_partition();
-
+  
   // initialize bucket gain list
   void init_gainbucket();
   
   // performs one pass of improvement
   // returns cut size
   int fm_pass();
-
+  
   int fm_full_pass();
-
+  
   void write_result(const std::string& output_file);
-
+  
   // checks if moving a cell respects the balance criterion
   bool is_move_balanced(int cell_id);
 
   // cut size
   int calc_cut();
-
+  
   std::vector<int> acc_gain;
   std::vector<int> move_order;
-
   std::vector<Net> nets;
   std::vector<Cell> cells;
-  
   std::vector<GainBucketList> gain_bucket;
-
   std::unordered_map<int, std::vector<int>> cell_to_nets;
   std::unordered_map<int, std::vector<int>> net_to_cells;
 
@@ -101,8 +97,6 @@ struct GainBucketList {
   GainBucketList();
 
   ~GainBucketList();
-
-
   // inserts a new node from the back
   void insert_back(int cell_id);
 
@@ -117,10 +111,6 @@ struct GainBucketList {
 
   // dump info for debugging
   void dump(std::ostream& os) const;
-
-  
 };
-
-
 
 }

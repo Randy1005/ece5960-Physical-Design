@@ -18,18 +18,11 @@ int main(int argc, char* argv[]) {
   
   std::cout << "cut size: " << cut << "\n";
   fm.write_result(argv[2]);
-  fm.dump_nets();
-
-
 
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;  
   std::cout << "Run time: " 
     << elapsed_time.count()
     << " ms\n";
 
-
   return 0;
-
-
-
 }
