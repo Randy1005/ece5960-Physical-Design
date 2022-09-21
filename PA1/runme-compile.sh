@@ -1,1 +1,1 @@
-clang++ -O3 FMPartition.cpp main.cpp
+clang++ -O3 FMPartition.cpp main.cpp -o fm
