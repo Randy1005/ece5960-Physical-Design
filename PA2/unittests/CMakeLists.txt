@@ -3,7 +3,7 @@ enable_testing()
 include(${FP_3RD_PARTY_DIR}/doctest/doctest.cmake)
 
 list(APPEND FP_UNITTESTS
-  example_test
+  verify_parse
 )
 
 foreach(unittest IN LISTS FP_UNITTESTS)

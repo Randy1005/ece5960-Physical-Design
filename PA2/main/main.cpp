@@ -3,8 +3,8 @@
 #include <chrono>
 
 int main(int argc, char* argv[]) {
-  if (argc != 3) {
-    std::cerr << "Usage: ./fp input_file output_file" << std::endl;
+  if (argc != 5) {
+    std::cerr << "Usage: ./fp [alpha] [input.block] [input.net] [output.rpt]" << std::endl;
     std::exit(EXIT_FAILURE);
   }
  
@@ -15,7 +15,8 @@ int main(int argc, char* argv[]) {
   
   
   std::cout << "start floor planning ...\n";
-
+  floorplanner::FloorPlanner fp;
+  fp.read_input(argv[1], argv[2], argv[3]);
 
   end_time = std::chrono::steady_clock::now(); 
 
