@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <random>
 
 namespace floorplanner {
 
@@ -34,6 +35,12 @@ public:
    */
   void read_input(const std::string& a, const std::string& blk_file, const std::string& net_file); 
 
+  /**
+   * @brief init_floorplan
+   * creates an initial valid polish expression
+   * for simulated annealing procedure
+   */
+  void init_floorplan();
 
 
   inline int id_of(const std::string& name) {
@@ -55,6 +62,12 @@ private:
   // currenty both terminals and blocks are stored in _macros
   // so be cautious while floorplanning
   std::vector<Macro> _macros;
+
+  // polish expression
+  // for slicing floorplan
+  std::vector<std::string> _polish_expr;
+
+  std::default_random_engine _rng;
 };
 
 

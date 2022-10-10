@@ -1,10 +1,11 @@
 #include "floorplanner.hpp"
 #include <iostream>
 #include <fstream>
-#include <algorithm>
+#include <sstream>
+#include <chrono>
 #include <cctype>
 #include <locale>
-
+#include <algorithm>
 
 namespace floorplanner {
 
@@ -51,6 +52,8 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
 
   _macros.resize(n_blks + n_terms);
 
+  // reserve for polish expression
+  _polish_expr.reserve(2 * n_blks + 1);
 
   std::string blk_name, blk_w, blk_h;
   // read in blocks
@@ -122,8 +125,43 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
   }
   std::cout << "\n";
   */
+  ifs.close();
+}
+
+
+
+void FloorPlanner::init_floorplan() {
+  unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
+  _rng = std::default_random_engine(seed);
+  std::vector<int> random_blks;
+  for (int i = 0; i < n_blks; i++) {
+    random_blks.push_back(i);
+  }
+
+  std::shuffle(std::begin(random_blks), std::end(random_blks), _rng);
+  
+  // place the first 2 blocks and their operand (H/V)
+  int cnt = 2;
+  while (cnt--) {
+    _polish_expr.push_back(std::to_string(random_blks[random_blks.size() - 1]));
+    random_blks.pop_back();
+  }
+  _polish_expr.push_back(_rng() % 2 == 0 ? "H" : "V");
+
+  // generates an initial PE that represents
+  // a floorplan that packs every block
+  // with vertical slices 
+  while (!random_blks.empty()) {
+    _polish_expr.push_back(std::to_string(random_blks[random_blks.size() - 1]));
+    _polish_expr.push_back(_rng() % 2 == 0 ? "H" : "V");
+    random_blks.pop_back();
+  }
+
 
 }
+
+
+
 
 
 }

@@ -17,7 +17,7 @@ int main(int argc, char* argv[]) {
   std::cout << "start floor planning ...\n";
   floorplanner::FloorPlanner fp;
   fp.read_input(argv[1], argv[2], argv[3]);
-
+  fp.init_floorplan();
   end_time = std::chrono::steady_clock::now(); 
 
 
