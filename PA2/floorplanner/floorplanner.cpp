@@ -17,13 +17,10 @@ static inline void rtrim(std::string &s) {
 } 
 
 
-
 void FloorPlanner::read_input(const std::string& a, const std::string& blk_file, const std::string& net_file) {
   // read in alpha factor
   alpha = std::stof(a); 
-  
   std::ifstream ifs;
-  
   
   // 1st file: *.block file 
   ifs.open(blk_file);
@@ -52,8 +49,6 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
 
   _macros.resize(n_blks + n_terms);
 
-  // reserve for polish expression
-  _polish_expr.reserve(2 * n_blks + 1);
 
   std::string blk_name, blk_w, blk_h;
   // read in blocks
@@ -68,11 +63,6 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
     _macros[blk] = Macro(MacroType::BLOCK, -1, -1, 
                   std::stoi(blk_w), std::stoi(blk_h));
   
-    /*
-    std::cout << "blk " << blk << "| type: " << static_cast<int>(_macros[blk].type) << "\n";
-    std::cout << "\t" << _macros[blk].x << " | " << _macros[blk].y << "|" <<  _macros[blk].w << "|" << _macros[blk].h << "\n";  
-    */
-
     _name_to_macro.insert(std::make_pair(blk_name, blk));
   }
 
@@ -88,17 +78,11 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
                         -1, -1);
     _name_to_macro.insert(std::make_pair(blk_name, n_blks + term));
     
-    /*
-    std::cout << "blk " << n_blks + term << "| type: " << static_cast<int>(_macros[n_blks + term].type) << "\n";
-    std::cout << "\t" << _macros[n_blks + term].x << " | " << _macros[n_blks + term].y << "|" <<  _macros[n_blks + term].w << "|" << _macros[n_blks + term].h << "\n";  
-    */
   } 
-
-  
   ifs.close();
   
   
-  // 1st file: *.block file 
+  // 2nd file: *.net file 
   ifs.open(net_file);
   if (!ifs) {
     throw std::runtime_error("failed to open net file.");
@@ -117,21 +101,20 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
     }
   }
 
-  /*
-  int t = 33;
-  std::cout << "net " << t << ":\n";
-  for (int i = 0; i < _net_to_macros[t].size(); i++) {
-    std::cout << _net_to_macros[t][i] << " ";
-  }
-  std::cout << "\n";
-  */
   ifs.close();
 }
 
 
 
 void FloorPlanner::init_floorplan() {
-  unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
+  _pos_seq_pair.resize(n_blks);
+	_neg_seq_pair.resize(n_blks);
+	for (int i = 0; i < n_blks; i++) {
+		_pos_seq_pair[i] = _neg_seq_pair[i] = i;
+	}
+	
+	/*
+	unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
   _rng = std::default_random_engine(seed);
   std::vector<int> random_blks;
   for (int i = 0; i < n_blks; i++) {
@@ -156,12 +139,26 @@ void FloorPlanner::init_floorplan() {
     _polish_expr.push_back(_rng() % 2 == 0 ? "H" : "V");
     random_blks.pop_back();
   }
-
-
+	*/
 }
 
 
+void FloorPlanner::dump(std::ostream& os) const {
+	std::cout << "num nets: " << n_nets << "\n";
+	std::cout << "num blks: " << n_blks << "\n";
+	
+	os << "seq pairs:\n";
+	for (int i = 0; i < n_blks; i++) {
+		os << _pos_seq_pair[i] << " ";
+	}
+	os << "\n";
 
+	for (int i = 0; i < n_blks; i++) {
+		os << _neg_seq_pair[i] << " ";
+	}
+	os << "\n";
+
+}
 
 
 }

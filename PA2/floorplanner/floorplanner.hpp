@@ -33,14 +33,18 @@ public:
    * reads input from *.block, *.nets files
    * and user input alpha factor
    */
-  void read_input(const std::string& a, const std::string& blk_file, const std::string& net_file); 
+  void read_input(const std::string& a, 
+			const std::string& blk_file, 
+			const std::string& net_file); 
 
   /**
    * @brief init_floorplan
-   * creates an initial valid polish expression
+   * creates an initial positive/negative sequence pair
    * for simulated annealing procedure
    */
   void init_floorplan();
+
+	void dump(std::ostream& os) const;
 
 
   inline int id_of(const std::string& name) {
@@ -63,9 +67,9 @@ private:
   // so be cautious while floorplanning
   std::vector<Macro> _macros;
 
-  // polish expression
-  // for slicing floorplan
-  std::vector<std::string> _polish_expr;
+  // sequence pairs
+	std::vector<int> _pos_seq_pair;
+	std::vector<int> _neg_seq_pair;
 
   std::default_random_engine _rng;
 };
