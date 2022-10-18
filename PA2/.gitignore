@@ -11,7 +11,12 @@ compile_commands.json
 CTestTestfile.cmake
 _deps
 
+
 # build folder
 [Bb]uild/
 [Bb]uild/*
 
+
+# swp files
+*.cpp.swp
+*.hpp.swp
