@@ -1,0 +1,13 @@
+Outline: 600 1200 
+NumBlocks: 6                                                                   
+NumTerminals: 1 
+
+
+bk0 4  6
+bk1 3  7
+bk2 3  3
+bk3 2  3
+bk4 4  3
+bk5 6  4
+
+VDD 322 233

@@ -2,10 +2,12 @@
 #include <vector>
 #include <unordered_map>
 #include <random>
+#include <algorithm>
 
 namespace floorplanner {
 
 struct Block;
+struct Match;
 class FloorPlanner;
 
 enum class MacroType {
@@ -22,7 +24,16 @@ struct Macro {
     type(type), x(x), y(y), w(w), h(h)
   {
   }
+};
 
+struct Match {
+	int at_x, at_y;
+	
+	Match() = default;
+	Match(int x, int y) :
+		at_x(x), at_y(y)
+	{
+	}
 };
 
 class FloorPlanner {
@@ -44,6 +55,21 @@ public:
    */
   void init_floorplan();
 
+	/**
+	 * @brief weighted_lcs
+	 * calculates the longest common subsequence(X, Y)
+	 * with block dimensions as weights
+	 * reference: https://dl.acm.org/doi/pdf/10.1145/343647.343713
+	 */
+	int weighted_lcs(const std::vector<int>& seq_x, 
+			const std::vector<int>& seq_y,
+			std::vector<int>& out_position,
+			std::vector<Match>& match,
+			bool is_horizontal);
+
+
+
+
 	void dump(std::ostream& os) const;
 
 
@@ -59,6 +85,10 @@ public:
   float alpha;
 
 private:
+	
+	// update the match list
+	void _update_match();
+
   std::unordered_map<std::string, int> _name_to_macro;
   std::vector<std::vector<int>> _net_to_macros;
   
@@ -72,8 +102,12 @@ private:
 	std::vector<int> _neg_seq_pair;
 
   std::default_random_engine _rng;
+	
+	// match list
+	// records which index the blocks is at
+	// in the positive / negative sequence
+	std::vector<Match> _match;
 };
-
 
 
 }

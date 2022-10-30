@@ -9,7 +9,6 @@
 
 namespace floorplanner {
 
-
 static inline void rtrim(std::string &s) {
   s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
       return !std::isspace(ch);
@@ -109,37 +108,57 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
 void FloorPlanner::init_floorplan() {
   _pos_seq_pair.resize(n_blks);
 	_neg_seq_pair.resize(n_blks);
+	_match.resize(n_blks);
+	
 	for (int i = 0; i < n_blks; i++) {
 		_pos_seq_pair[i] = _neg_seq_pair[i] = i;
+		_match[i].at_x = _match[i].at_y = i;
+	}
+
+}
+
+
+int FloorPlanner::weighted_lcs(const std::vector<int>& seq_x, 
+		const std::vector<int>& seq_y,
+		std::vector<int>& out_positions,
+		std::vector<Match>& match,
+		bool is_horizontal) {
+	// PRE-CONDITION: match is already updated
+	// and out_positions is cleared
+
+	// initialize length with size of n_blks
+	std::vector<int> length(n_blks, 0);	
+	for (int i = 0; i < n_blks; i++) {
+		int block, pos;
+		if (is_horizontal) {
+			block = seq_x[i];
+			pos = match[block].at_y;
+		}
+		else {
+			block = seq_y[i];
+			pos = match[block].at_x;
+		}
+		out_positions[block] = length[pos];
+
+		int t;
+		if (is_horizontal) {
+			t = out_positions[block] + _macros[block].w;
+		}
+		else {
+			t = out_positions[block] + _macros[block].h;
+		}
+
+		for (int j = pos; j < n_blks; j++) {
+			if (t > length[j]) {
+				length[j] = t;
+			}
+			else {
+				break;
+			}
+		}
 	}
 	
-	/*
-	unsigned seed = std::chrono::steady_clock::now().time_since_epoch().count();
-  _rng = std::default_random_engine(seed);
-  std::vector<int> random_blks;
-  for (int i = 0; i < n_blks; i++) {
-    random_blks.push_back(i);
-  }
-
-  std::shuffle(std::begin(random_blks), std::end(random_blks), _rng);
-  
-  // place the first 2 blocks and their operand (H/V)
-  int cnt = 2;
-  while (cnt--) {
-    _polish_expr.push_back(std::to_string(random_blks[random_blks.size() - 1]));
-    random_blks.pop_back();
-  }
-  _polish_expr.push_back(_rng() % 2 == 0 ? "H" : "V");
-
-  // generates an initial PE that represents
-  // a floorplan that packs every block
-  // with vertical slices 
-  while (!random_blks.empty()) {
-    _polish_expr.push_back(std::to_string(random_blks[random_blks.size() - 1]));
-    _polish_expr.push_back(_rng() % 2 == 0 ? "H" : "V");
-    random_blks.pop_back();
-  }
-	*/
+	return length[n_blks - 1];
 }
 
 
@@ -157,6 +176,14 @@ void FloorPlanner::dump(std::ostream& os) const {
 		os << _neg_seq_pair[i] << " ";
 	}
 	os << "\n";
+
+}
+
+
+void FloorPlanner::_update_match() {
+	for (int i = 0; i < n_blks; i++) {
+	
+	}
 
 }
 
