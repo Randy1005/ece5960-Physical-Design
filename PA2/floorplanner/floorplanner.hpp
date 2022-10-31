@@ -160,6 +160,7 @@ private:
   std::default_random_engine _rng;
 	std::random_device _rd;
 	std::uniform_int_distribution<int> _uni_int_dist;	
+	std::uniform_real_distribution<double> _uni_real_dist;
 	// match list
 	// records which index the blocks is at
 	// in the positive / negative sequence
