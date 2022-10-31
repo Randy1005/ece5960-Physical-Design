@@ -40,7 +40,7 @@ struct Match {
 
 class FloorPlanner {
 public:
-  FloorPlanner() = default;
+  FloorPlanner();
   /**
    * @brief read_input
    * reads input from *.block, *.nets files
@@ -70,6 +70,13 @@ public:
 			bool is_horizontal);
 	
 
+	/**
+	 * @brief simulated_annealing
+	 * main method for simulated annealing
+	 */
+	void simulated_annealing();
+
+
 	void dump(std::ostream& os) const;
 
 
@@ -88,32 +95,52 @@ public:
 			int max_x = 0, min_x = std::numeric_limits<int>::max(); 
 			int max_y = 0, min_y = std::numeric_limits<int>::max();
 			for (const auto& b : net) {
-				max_x = std::max(_macros[b].x, max_x);
+				max_x = std::max(_macros[b].x + _macros[b].w, max_x);
 				min_x = std::min(_macros[b].x, min_x);
-				max_y = std::max(_macros[b].y, max_y);
+				max_y = std::max(_macros[b].y + _macros[b].h, max_y);
 				min_y = std::min(_macros[b].y, min_y);
 			}
+
+			/*
 			std::cout << "max_x = " << max_x << "\n";
 			std::cout << "min_x = " << min_x << "\n";
+			std::cout << "max_y = " << max_y << "\n";
+			std::cout << "min_y = " << min_y << "\n";
+			*/
 			w += ((max_x - min_x) + (max_y - min_y));
 		}
 
 		return w;
 	}
 
-
+	/**
+	 * @brief cost
+	 * cost function = alpha * (Area / Anorm) + (1-alpha) * (WireLength / Wnorm)
+	 * where Anorm = average area when we generate a solution m times
+	 */
+	inline double cost() const {
+		return alpha * ((_curr_bbox_w * _curr_bbox_h) / _area_norm)
+			+ (1 - alpha) * (hpwl() / _w_norm);
+	}
 
   int chip_width;
   int chip_height;
   int n_blks;
   int n_terms;
   int n_nets;
-  float alpha;
+  double alpha;
 
 private:
 	
 	// update the match list
+	// and the reversed positive sequence pair 
 	void _update_match();
+
+	// update the largest common subsequence
+	void _update_weighted_lcs();
+
+	// swap 2 numbers in the positive sequence
+	void _swap_blks_pos();
 
   std::unordered_map<std::string, int> _name_to_macro;
   std::vector<std::vector<int>> _net_to_macros;
@@ -127,8 +154,12 @@ private:
 	std::vector<int> _pos_seq_pair;
 	std::vector<int> _neg_seq_pair;
 
+	// current floorplan width, height
+	int _curr_bbox_w, _curr_bbox_h;
+
   std::default_random_engine _rng;
-	
+	std::random_device _rd;
+	std::uniform_int_distribution<int> _uni_int_dist;	
 	// match list
 	// records which index the blocks is at
 	// in the positive / negative sequence
@@ -137,6 +168,12 @@ private:
 	// match list with x component reversed
 	// we need this to calculate vertical lcs
 	std::vector<Match> _match_x_rev;
+
+	// area normalize factor
+	double _area_norm;
+
+	// wire length normalize factor
+	double _w_norm;
 };
 
 

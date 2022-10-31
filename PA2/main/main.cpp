@@ -56,7 +56,11 @@ int main(int argc, char* argv[]) {
   
   fp.read_input(argv[1], argv[2], argv[3]);
   fp.init_floorplan();
-		
+
+	std::cout << "initial state:\n";
+	fp.dump(std::cout);
+
+	fp.simulated_annealing();
 
 	fp.dump(std::cout);
   end_time = std::chrono::steady_clock::now(); 

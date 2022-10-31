@@ -16,9 +16,16 @@ static inline void rtrim(std::string &s) {
 } 
 
 
+FloorPlanner::FloorPlanner() :
+	_rng(_rd())
+{
+	
+}
+
+
 void FloorPlanner::read_input(const std::string& a, const std::string& blk_file, const std::string& net_file) {
   // read in alpha factor
-  alpha = std::stof(a); 
+  alpha = std::stod(a); 
   std::ifstream ifs;
   
   // 1st file: *.block file 
@@ -74,7 +81,7 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
     }
 
     _macros[n_blks + term] = Macro(MacroType::TERMINAL, stoi(blk_x), stoi(blk_y),
-                        -1, -1);
+                        0, 0);
     _name_to_macro.insert(std::make_pair(blk_name, n_blks + term));
     
   } 
@@ -100,6 +107,9 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
     }
   }
 
+
+
+	_uni_int_dist = std::uniform_int_distribution(0, n_blks - 1);
   ifs.close();
 }
 
@@ -109,15 +119,58 @@ void FloorPlanner::init_floorplan() {
   _pos_seq_pair.resize(n_blks);
 	_neg_seq_pair.resize(n_blks);
 	_match.resize(n_blks);
-	
+	_match_x_rev.resize(n_blks);
+
+	// initial sequence pairs
+	// just line the blocks up from left to right
 	for (int i = 0; i < n_blks; i++) {
 		_pos_seq_pair[i] = _neg_seq_pair[i] = i;
-		_match[i].at_x = _match[i].at_y = i;
 	}
-	
-		
+
+	// initialize Anorm, Wnorm
+	_w_norm = 1.0;
+	_area_norm = 1.0;
+
+	// update the match list
+	// and recover floorplan from sequence pairs
+	_update_match();
+	_update_weighted_lcs();	
 }
 
+void FloorPlanner::simulated_annealing() {
+	
+	double temperature = 1000.0;
+	bool frozen = false;	
+	while (!frozen) {
+		// cache previous sequence pair
+		// so we could undo
+		std::vector<int> old_pos_seq = _pos_seq_pair;
+		std::vector<int> old_neg_seq = _neg_seq_pair;
+		std::vector<Match> old_match = _match;
+		std::vector<Match> old_match_x_rev = _match_x_rev;
+		double old_cost = cost();
+
+		_swap_blks_pos();	
+		_update_match();
+		_update_weighted_lcs();
+		
+		double delta = cost() - old_cost;
+		
+		std::cout << "delta = " << delta << "\n";
+		if (delta <= 0) {
+			std::cout << "must accept\n";
+		}
+		else {
+			std::cout << "accept with probability\n";
+		}
+
+		if (temperature < 20.0) {
+			frozen = true;
+		}
+		temperature *= .95;
+	}
+	
+}
 
 int FloorPlanner::weighted_lcs(const std::vector<int>& seq_x, 
 		const std::vector<int>& seq_y,
@@ -170,6 +223,7 @@ int FloorPlanner::weighted_lcs(const std::vector<int>& seq_x,
 
 
 void FloorPlanner::dump(std::ostream& os) const {
+	/*
 	std::cout << "num nets: " << n_nets << "\n";
 	std::cout << "num blks: " << n_blks << "\n";
 	
@@ -183,17 +237,44 @@ void FloorPlanner::dump(std::ostream& os) const {
 		os << _neg_seq_pair[i] << " ";
 	}
 	os << "\n";
+	*/
 
 	std::cout << "current hpwl = " << hpwl() << "\n";
-
+	std::cout << "current cost = " << cost() << "\n";
 }
 
 
 void FloorPlanner::_update_match() {
 	for (int i = 0; i < n_blks; i++) {
-	
+		_match[i].at_x = 
+			_match[i].at_y =
+			_match_x_rev[i].at_y =
+			_pos_seq_pair[i];
+		
+		_match_x_rev[i].at_x = n_blks - _match[i].at_x - 1;
 	}
+}
 
+void FloorPlanner::_update_weighted_lcs() {
+	std::vector<int> pos;
+	pos.resize(n_blks);
+	// assign initial position to floorplan
+	_curr_bbox_w = weighted_lcs(_pos_seq_pair, _neg_seq_pair,
+			pos, _match, 1);
+	
+	std::vector<int> pos_seq_rev = _pos_seq_pair;
+	std::reverse(pos_seq_rev.begin(), pos_seq_rev.end());
+	
+	_curr_bbox_h = weighted_lcs(pos_seq_rev, _neg_seq_pair,
+			pos, _match_x_rev, 0);
+}
+
+void FloorPlanner::_swap_blks_pos() {
+	int blk_a = _uni_int_dist(_rng);
+	int blk_b = _uni_int_dist(_rng);
+	
+	// swap blk_a and blk_b
+	std::swap(_pos_seq_pair[blk_a], _pos_seq_pair[blk_b]);	
 }
 
 
