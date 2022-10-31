@@ -114,7 +114,8 @@ void FloorPlanner::init_floorplan() {
 		_pos_seq_pair[i] = _neg_seq_pair[i] = i;
 		_match[i].at_x = _match[i].at_y = i;
 	}
-
+	
+		
 }
 
 
@@ -139,7 +140,13 @@ int FloorPlanner::weighted_lcs(const std::vector<int>& seq_x,
 			pos = match[block].at_x;
 		}
 		out_positions[block] = length[pos];
-
+		if (is_horizontal) {
+			_macros[block].x = out_positions[block];
+		}	
+		else {
+			_macros[block].y = out_positions[block];
+		}
+	
 		int t;
 		if (is_horizontal) {
 			t = out_positions[block] + _macros[block].w;
@@ -176,6 +183,8 @@ void FloorPlanner::dump(std::ostream& os) const {
 		os << _neg_seq_pair[i] << " ";
 	}
 	os << "\n";
+
+	std::cout << "current hpwl = " << hpwl() << "\n";
 
 }
 

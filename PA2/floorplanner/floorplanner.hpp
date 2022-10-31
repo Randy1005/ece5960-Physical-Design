@@ -3,6 +3,8 @@
 #include <unordered_map>
 #include <random>
 #include <algorithm>
+#include <limits>
+#include <iostream>
 
 namespace floorplanner {
 
@@ -66,9 +68,7 @@ public:
 			std::vector<int>& out_position,
 			std::vector<Match>& match,
 			bool is_horizontal);
-
-
-
+	
 
 	void dump(std::ostream& os) const;
 
@@ -76,6 +76,32 @@ public:
   inline int id_of(const std::string& name) {
     return _name_to_macro[name];
   }
+	
+	/**
+	 * @brief hpwl
+	 * calculates the total half-perimeter wire length
+	 * for all nets
+	 */
+	inline int hpwl() const {
+		int w = 0;
+		for (const auto& net : _net_to_macros) {
+			int max_x = 0, min_x = std::numeric_limits<int>::max(); 
+			int max_y = 0, min_y = std::numeric_limits<int>::max();
+			for (const auto& b : net) {
+				max_x = std::max(_macros[b].x, max_x);
+				min_x = std::min(_macros[b].x, min_x);
+				max_y = std::max(_macros[b].y, max_y);
+				min_y = std::min(_macros[b].y, min_y);
+			}
+			std::cout << "max_x = " << max_x << "\n";
+			std::cout << "min_x = " << min_x << "\n";
+			w += ((max_x - min_x) + (max_y - min_y));
+		}
+
+		return w;
+	}
+
+
 
   int chip_width;
   int chip_height;
@@ -107,6 +133,10 @@ private:
 	// records which index the blocks is at
 	// in the positive / negative sequence
 	std::vector<Match> _match;
+
+	// match list with x component reversed
+	// we need this to calculate vertical lcs
+	std::vector<Match> _match_x_rev;
 };
 
 
