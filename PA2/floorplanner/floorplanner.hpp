@@ -119,6 +119,9 @@ public:
 	 * where Anorm = average area when we generate a solution m times
 	 */
 	inline double cost() const {
+		std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
+		std::cout << "w = " << hpwl() << "\n";
+
 		return alpha * ((_curr_bbox_w * _curr_bbox_h) / _area_norm)
 			+ (1 - alpha) * (hpwl() / _w_norm);
 	}
@@ -139,9 +142,12 @@ private:
 	// update the largest common subsequence
 	void _update_weighted_lcs();
 
-	// swap 2 numbers in the positive sequence
+	// Move 1: swap 2 blocks in the positive sequence
 	void _swap_blks_pos();
-
+	
+	// Move 2: swap 2 blocks in the negative sequence
+	void _swap_blks_neg();
+	
   std::unordered_map<std::string, int> _name_to_macro;
   std::vector<std::vector<int>> _net_to_macros;
   
@@ -160,6 +166,7 @@ private:
   std::default_random_engine _rng;
 	std::random_device _rd;
 	std::uniform_int_distribution<int> _uni_int_dist;	
+	std::uniform_int_distribution<int> _uni_int_dist02;
 	std::uniform_real_distribution<double> _uni_real_dist;
 	// match list
 	// records which index the blocks is at

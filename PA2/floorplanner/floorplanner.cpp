@@ -20,6 +20,7 @@ FloorPlanner::FloorPlanner() :
 	_rng(_rd())
 {
 	_uni_real_dist = std::uniform_real_distribution<double>(0, 1);
+	_uni_int_dist02 = std::uniform_int_distribution<int>(0, 2);
 }
 
 
@@ -133,7 +134,13 @@ void FloorPlanner::init_floorplan() {
 
 	// update the match list
 	// and recover floorplan from sequence pairs
-	_update_match();
+	for (int i = 0; i < n_blks; i++) {
+		_match[i].at_x = _match[i].at_y = _match_x_rev[i].at_y = 
+			_pos_seq_pair[i];
+		_match_x_rev[i].at_x = n_blks - _match[i].at_x - 1;
+	}
+	
+	
 	_update_weighted_lcs();	
 }
 
@@ -142,7 +149,7 @@ void FloorPlanner::simulated_annealing() {
 	int accum_area = _curr_bbox_w * _curr_bbox_h;
 	int accum_w = hpwl(); 
 
-	double temperature = 100.0;
+	double temperature = 100000.0;
 	bool frozen = false;
 
 	while (!frozen) {
@@ -152,25 +159,39 @@ void FloorPlanner::simulated_annealing() {
 		std::vector<int> old_neg_seq = _neg_seq_pair;
 		std::vector<Match> old_match = _match;
 		std::vector<Match> old_match_x_rev = _match_x_rev;
-
 		
-		/*
-		std::cout << "delta = " << delta << "\n";
+		double old_cost = cost();
+		
+		int move_choice = _uni_int_dist02(_rng);
+
+		if (move_choice == 0) {
+			_swap_blks_pos();
+		}
+		else if (move_choice == 1) {
+			_swap_blks_neg();
+		}
+		
+		_update_weighted_lcs();
+
+		double delta = cost() - old_cost;
+		
 		if (delta < 0) {
-			std::cout << "must accept\n";
 			accept_moves++;
 			accum_area += _curr_bbox_w * _curr_bbox_h;
 			accum_w += hpwl();
 			_area_norm = accum_area / accept_moves;
 			_w_norm = accum_w / accept_moves;
+			
+			temperature *= .95;
 		}
 		else {
 			double uni_rand = _uni_real_dist(_rng);
-			std::cout << "uni rand = " << uni_rand << "\n";
+			std::cout << "uni_rand = " << uni_rand << "\n";
 			std::cout << "exp = " << std::exp(-delta / temperature) << "\n";
-			if (uni_rand < std::exp(-delta / temperature)) {
-			}
-			else {
+
+			int floorplan_area = _curr_bbox_w * _curr_bbox_h;
+			if (uni_rand > std::exp(-delta * 100 / temperature) || 
+					floorplan_area > chip_width * chip_height) {
 				// undo the move we just did
 				_pos_seq_pair = old_pos_seq;
 				_neg_seq_pair = old_neg_seq;
@@ -178,13 +199,10 @@ void FloorPlanner::simulated_annealing() {
 				_match_x_rev = old_match_x_rev;
 			}
 		}
-		*/
-
 
 		if (temperature < 10.0) {
 			frozen = true;
 		}
-		temperature *= .95;
 	}
 	
 }
@@ -257,16 +275,10 @@ void FloorPlanner::dump(std::ostream& os) const {
 	*/
 
 	std::cout << "current hpwl = " << hpwl() << "\n";
+	std::cout << "current chip area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 	std::cout << "current cost = " << cost() << "\n";
 }
 
-
-void FloorPlanner::_update_match() {
-	for (int i = 0; i < n_blks; i++) {
-		_match[i].at_x = _pos_seq_pair[i];
-		_match_x_rev[i].at_x = n_blks - _match[i].at_x - 1;
-	}
-}
 
 void FloorPlanner::_update_weighted_lcs() {
 	std::vector<int> pos;
@@ -285,25 +297,34 @@ void FloorPlanner::_update_weighted_lcs() {
 void FloorPlanner::_swap_blks_pos() {
 	int blk_a = _uni_int_dist(_rng);
 	int blk_b = _uni_int_dist(_rng);
-	
-
-	std::cout << "blk_a = " << blk_a << "\n";
-	std::cout << "blk_b = " << blk_b << "\n";
+	while (blk_b == blk_a) {
+		blk_b = _uni_int_dist(_rng);
+	}
 
 	// swap blk_a and blk_b
 	std::swap(_pos_seq_pair[blk_a], _pos_seq_pair[blk_b]);
-
-	std::cout << "after swap, pos_seq = \n";
-	for (int i = 0; i < _pos_seq_pair.size(); i++) {
-		std::cout << _pos_seq_pair[i] << ", ";
-	}
 
 	// update match
 	_match[_pos_seq_pair[blk_b]].at_x = blk_b;
 	_match[_pos_seq_pair[blk_a]].at_x = blk_a;
 
-	// FIXME: update match with seq_x reversed
+	std::swap(_match_x_rev[blk_a], _match_x_rev[blk_b]);
 }
 
+
+void FloorPlanner::_swap_blks_neg() {
+	int blk_a = _uni_int_dist(_rng);
+	int blk_b = _uni_int_dist(_rng);
+	while (blk_b == blk_a) {
+		blk_b = _uni_int_dist(_rng);
+	}
+
+	// swap blk_a and blk_b
+	std::swap(_neg_seq_pair[blk_a], _neg_seq_pair[blk_b]);
+
+	// update match
+	_match[_neg_seq_pair[blk_b]].at_x = blk_b;
+	_match[_neg_seq_pair[blk_a]].at_x = blk_a;
+}
 
 }
