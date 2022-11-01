@@ -119,8 +119,8 @@ public:
 	 * where Anorm = average area when we generate a solution m times
 	 */
 	inline double cost() const {
-		std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
-		std::cout << "w = " << hpwl() << "\n";
+		// std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
+		// std::cout << "w = " << hpwl() << "\n";
 
 		return alpha * ((_curr_bbox_w * _curr_bbox_h) / _area_norm)
 			+ (1 - alpha) * (hpwl() / _w_norm);

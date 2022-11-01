@@ -186,8 +186,8 @@ void FloorPlanner::simulated_annealing() {
 		}
 		else {
 			double uni_rand = _uni_real_dist(_rng);
-			std::cout << "uni_rand = " << uni_rand << "\n";
-			std::cout << "exp = " << std::exp(-delta / temperature) << "\n";
+			// std::cout << "uni_rand = " << uni_rand << "\n";
+			// std::cout << "exp = " << std::exp(-delta / temperature) << "\n";
 
 			int floorplan_area = _curr_bbox_w * _curr_bbox_h;
 			if (uni_rand > std::exp(-delta * 100 / temperature) || 
