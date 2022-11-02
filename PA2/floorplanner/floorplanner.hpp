@@ -20,6 +20,7 @@ enum class MacroType {
 struct Macro {
   MacroType type;
   int x, y, w, h;
+	std::string name;
 
   Macro() = default;
   Macro(MacroType type, int x, int y, int w, int h):
@@ -125,6 +126,30 @@ public:
 		return alpha * ((_curr_bbox_w * _curr_bbox_h) / _area_norm)
 			+ (1 - alpha) * (hpwl() / _w_norm);
 	}
+
+
+	inline void visualize() const {
+		std::cout << "{\"block_number\":" << n_blks << ",";
+		std::cout << "\"llx\":0,\"lly\":0,"
+			<< "\"urx\":" << chip_width << ","
+			<< "\"ury\":" << chip_height << ","
+			<< "\"area\":" << chip_width * chip_height << ","
+			<< "\"coordinates\":[";
+		int blks = 0;
+		for (blks = 0; blks < n_blks;) {
+			std::cout << "{\"idx\":\"" << _macros[blks].name << "\","
+				<< "\"llx\":" << _macros[blks].x << ","
+				<< "\"lly\":" << _macros[blks].y << ","
+				<< "\"width\":" << _macros[blks].w << ","
+				<< "\"height\":" << _macros[blks].h << "}";
+			if (blks++ < n_blks-1) {
+				std::cout << ",";
+			}
+		}
+
+		std::cout << "]}" << '\n';
+	}
+
 
   int chip_width;
   int chip_height;

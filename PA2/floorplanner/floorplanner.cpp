@@ -6,6 +6,7 @@
 #include <cctype>
 #include <locale>
 #include <algorithm>
+#include <cassert>
 
 namespace floorplanner {
 
@@ -69,7 +70,8 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
     
     _macros[blk] = Macro(MacroType::BLOCK, -1, -1, 
                   std::stoi(blk_w), std::stoi(blk_h));
-  
+	
+		_macros[blk].name = blk_name;
     _name_to_macro.insert(std::make_pair(blk_name, blk));
   }
 
@@ -83,8 +85,9 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
 
     _macros[n_blks + term] = Macro(MacroType::TERMINAL, stoi(blk_x), stoi(blk_y),
                         0, 0);
+
+		_macros[n_blks + term].name = blk_name;
     _name_to_macro.insert(std::make_pair(blk_name, n_blks + term));
-    
   } 
   ifs.close();
   
@@ -128,10 +131,6 @@ void FloorPlanner::init_floorplan() {
 		_pos_seq_pair[i] = _neg_seq_pair[i] = i;
 	}
 
-	// initialize Anorm, Wnorm
-	_w_norm = 1.0;
-	_area_norm = 1.0;
-
 	// update the match list
 	// and recover floorplan from sequence pairs
 	for (int i = 0; i < n_blks; i++) {
@@ -140,70 +139,91 @@ void FloorPlanner::init_floorplan() {
 		_match_x_rev[i].at_x = n_blks - _match[i].at_x - 1;
 	}
 	
-	
 	_update_weighted_lcs();	
+
+	// initialize Anorm, Wnorm
+	_w_norm = hpwl();
+	_area_norm = _curr_bbox_w * _curr_bbox_h;
 }
 
 void FloorPlanner::simulated_annealing() {
+	/*
 	int accept_moves = 1;
 	int accum_area = _curr_bbox_w * _curr_bbox_h;
 	int accum_w = hpwl(); 
 
-	double temperature = 100000.0;
+	double temperature = 1000.0;
 	bool frozen = false;
 
 	while (!frozen) {
+		int k = 10;
 		// cache previous sequence pair
 		// so we could undo
 		std::vector<int> old_pos_seq = _pos_seq_pair;
 		std::vector<int> old_neg_seq = _neg_seq_pair;
 		std::vector<Match> old_match = _match;
 		std::vector<Match> old_match_x_rev = _match_x_rev;
-		
-		double old_cost = cost();
-		
-		int move_choice = _uni_int_dist02(_rng);
+		while (k--) {
+			double old_cost = cost();
 
-		if (move_choice == 0) {
-			_swap_blks_pos();
-		}
-		else if (move_choice == 1) {
-			_swap_blks_neg();
-		}
-		
-		_update_weighted_lcs();
+			int move_choice = _uni_int_dist02(_rng);
 
-		double delta = cost() - old_cost;
-		
-		if (delta < 0) {
-			accept_moves++;
-			accum_area += _curr_bbox_w * _curr_bbox_h;
-			accum_w += hpwl();
-			_area_norm = accum_area / accept_moves;
-			_w_norm = accum_w / accept_moves;
-			
-			temperature *= .95;
-		}
-		else {
-			double uni_rand = _uni_real_dist(_rng);
-			// std::cout << "uni_rand = " << uni_rand << "\n";
-			// std::cout << "exp = " << std::exp(-delta / temperature) << "\n";
-
-			int floorplan_area = _curr_bbox_w * _curr_bbox_h;
-			if (uni_rand > std::exp(-delta * 100 / temperature) || 
-					floorplan_area > chip_width * chip_height) {
-				// undo the move we just did
-				_pos_seq_pair = old_pos_seq;
-				_neg_seq_pair = old_neg_seq;
-				_match = old_match;
-				_match_x_rev = old_match_x_rev;
+			if (move_choice == 0) {
+				_swap_blks_pos();
 			}
+			else if (move_choice == 1) {
+				_swap_blks_neg();
+			}
+			
+			_update_weighted_lcs();
+
+			double delta = cost() - old_cost;
+			delta *= 100;
+			
+			std::cout << "new_cost = " << cost() << "\n";
+			std::cout << "old_cost = " << old_cost << "\n";
+			if (delta < 0) {
+				accept_moves++;
+				accum_area += _curr_bbox_w * _curr_bbox_h;
+				accum_w += hpwl();
+				_area_norm = accum_area / accept_moves;
+				_w_norm = accum_w / accept_moves;
+			}
+			else {
+				double uni_rand = _uni_real_dist(_rng);
+				std::cout << "uni_rand = " << uni_rand << "\n";
+				
+				double p = std::exp(static_cast<double>(-delta) / temperature);
+				std::cout << "exp = " << p << "\n";
+				std::cout << "temp = " << temperature << "\n";
+				// FIXME: exp is always nearly 1, making this always accept 
+				// worse solution
+				if (uni_rand >= p) {
+					// undo the move we just did
+					_pos_seq_pair = old_pos_seq;
+					_neg_seq_pair = old_neg_seq;
+					_match = old_match;
+					_match_x_rev = old_match_x_rev;
+				}
+			}
+
 		}
 
 		if (temperature < 10.0) {
 			frozen = true;
 		}
+
+		temperature *= .95;
 	}
+	*/
+
+	int n = 50;
+	while(n--) {
+		_swap_blks_pos();
+		_swap_blks_neg();
+		_update_weighted_lcs();
+	}
+
 	
 }
 
@@ -277,6 +297,8 @@ void FloorPlanner::dump(std::ostream& os) const {
 	std::cout << "current hpwl = " << hpwl() << "\n";
 	std::cout << "current chip area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 	std::cout << "current cost = " << cost() << "\n";
+
+	visualize();
 }
 
 
