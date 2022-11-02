@@ -217,11 +217,11 @@ void FloorPlanner::simulated_annealing() {
 	}
 	*/
 
-	int n = 50;
+	int n = 1;
 	while(n--) {
 		_swap_blks_pos();
-		_swap_blks_neg();
 		_update_weighted_lcs();
+		// _swap_blks_neg();
 	}
 
 	
@@ -330,7 +330,13 @@ void FloorPlanner::_swap_blks_pos() {
 	_match[_pos_seq_pair[blk_b]].at_x = blk_b;
 	_match[_pos_seq_pair[blk_a]].at_x = blk_a;
 
-	std::swap(_match_x_rev[blk_a], _match_x_rev[blk_b]);
+	int rev_blk_a = n_blks - 1 - blk_a;
+	int rev_blk_b = n_blks - 1 - blk_b;
+	std::vector<int> _pos_seq_pair_rev = _pos_seq_pair;
+	std::reverse(_pos_seq_pair_rev.begin(), _pos_seq_pair_rev.end());
+	_match_x_rev[_pos_seq_pair_rev[rev_blk_b]].at_x = rev_blk_b;
+	_match_x_rev[_pos_seq_pair_rev[rev_blk_a]].at_x = rev_blk_a;
+	
 }
 
 
@@ -345,8 +351,12 @@ void FloorPlanner::_swap_blks_neg() {
 	std::swap(_neg_seq_pair[blk_a], _neg_seq_pair[blk_b]);
 
 	// update match
-	_match[_neg_seq_pair[blk_b]].at_x = blk_b;
-	_match[_neg_seq_pair[blk_a]].at_x = blk_a;
+	_match[_neg_seq_pair[blk_b]].at_y = blk_b;
+	_match[_neg_seq_pair[blk_a]].at_y = blk_a;
+
+	int tmp = _match_x_rev[blk_a].at_y;
+	_match_x_rev[blk_a].at_y = _match_x_rev[blk_a].at_y;
+	_match_x_rev[blk_b].at_y = tmp;
 }
 
 }
