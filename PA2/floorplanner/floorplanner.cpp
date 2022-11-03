@@ -147,12 +147,11 @@ void FloorPlanner::init_floorplan() {
 }
 
 void FloorPlanner::simulated_annealing() {
-	/*
 	int accept_moves = 1;
 	int accum_area = _curr_bbox_w * _curr_bbox_h;
 	int accum_w = hpwl(); 
 
-	double temperature = 1000.0;
+	double temperature = 100000.0;
 	bool frozen = false;
 
 	while (!frozen) {
@@ -198,7 +197,7 @@ void FloorPlanner::simulated_annealing() {
 				std::cout << "temp = " << temperature << "\n";
 				// FIXME: exp is always nearly 1, making this always accept 
 				// worse solution
-				if (uni_rand >= p) {
+				if (uni_rand < p) {
 					// undo the move we just did
 					_pos_seq_pair = old_pos_seq;
 					_neg_seq_pair = old_neg_seq;
@@ -215,15 +214,6 @@ void FloorPlanner::simulated_annealing() {
 
 		temperature *= .95;
 	}
-	*/
-
-	int n = 1;
-	while(n--) {
-		_swap_blks_pos();
-		_update_weighted_lcs();
-		// _swap_blks_neg();
-	}
-
 	
 }
 
@@ -353,10 +343,14 @@ void FloorPlanner::_swap_blks_neg() {
 	// update match
 	_match[_neg_seq_pair[blk_b]].at_y = blk_b;
 	_match[_neg_seq_pair[blk_a]].at_y = blk_a;
-
-	int tmp = _match_x_rev[blk_a].at_y;
-	_match_x_rev[blk_a].at_y = _match_x_rev[blk_a].at_y;
-	_match_x_rev[blk_b].at_y = tmp;
+	
+	int rev_blk_a = n_blks - 1 - blk_a;
+	int rev_blk_b = n_blks - 1 - blk_b;
+	std::vector<int> _neg_seq_pair_rev = _neg_seq_pair;
+	std::reverse(_neg_seq_pair_rev.begin(), _neg_seq_pair_rev.end());
+	_match_x_rev[_neg_seq_pair_rev[rev_blk_b]].at_y = rev_blk_b;
+	_match_x_rev[_neg_seq_pair_rev[rev_blk_a]].at_y = rev_blk_a;
+	
 }
 
 }
