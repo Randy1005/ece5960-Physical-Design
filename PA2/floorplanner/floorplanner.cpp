@@ -151,18 +151,21 @@ void FloorPlanner::simulated_annealing() {
 	int accum_area = _curr_bbox_w * _curr_bbox_h;
 	int accum_w = hpwl(); 
 
-	double temperature = 100000.0;
+	double temperature = 1000000.0;
 	bool frozen = false;
 
 	while (!frozen) {
 		int k = 10;
-		// cache previous sequence pair
-		// so we could undo
-		std::vector<int> old_pos_seq = _pos_seq_pair;
-		std::vector<int> old_neg_seq = _neg_seq_pair;
-		std::vector<Match> old_match = _match;
-		std::vector<Match> old_match_x_rev = _match_x_rev;
 		while (k--) {
+			// cache previous sequence pair
+			// so we could undo
+			std::vector<int> old_pos_seq = _pos_seq_pair;
+			std::vector<int> old_neg_seq = _neg_seq_pair;
+			std::vector<Match> old_match = _match;
+			std::vector<Match> old_match_x_rev = _match_x_rev;
+			std::vector<Macro> old_macros = _macros;
+			int old_bbox_w = _curr_bbox_w;
+			int old_bbox_h = _curr_bbox_h;
 			double old_cost = cost();
 
 			int move_choice = _uni_int_dist02(_rng);
@@ -170,19 +173,19 @@ void FloorPlanner::simulated_annealing() {
 			if (move_choice == 0) {
 				_swap_blks_pos();
 			}
-			else if (move_choice == 1) {
+			else {
 				_swap_blks_neg();
 			}
 			
 			_update_weighted_lcs();
-
 			double delta = cost() - old_cost;
 		
-			// FIXME: sclae delta by 100 here?
-
+			// FIXME: scale delta by ?
+			
 			std::cout << "new_cost = " << cost() << "\n";
 			std::cout << "old_cost = " << old_cost << "\n";
 			if (delta < 0) {
+				std::cout << "accept\n";
 				accept_moves++;
 				accum_area += _curr_bbox_w * _curr_bbox_h;
 				accum_w += hpwl();
@@ -190,21 +193,32 @@ void FloorPlanner::simulated_annealing() {
 				_w_norm = accum_w / accept_moves;
 			}
 			else {
-				double uni_rand = _uni_real_dist(_rng);
-				std::cout << "uni_rand = " << uni_rand << "\n";
 				
-				double p = std::exp(static_cast<double>(-delta) / temperature);
-				std::cout << "exp = " << p << "\n";
-				std::cout << "temp = " << temperature << "\n";
-				// FIXME: exp is always nearly 1, making this always accept 
-				// worse solution
+				double uni_rand = _uni_real_dist(_rng);
+				// std::cout << "uni_rand = " << uni_rand << "\n";
+				double p = std::exp(static_cast<double>(-delta * 100) / temperature);
+				// std::cout << "power = " << static_cast<double>(-delta) / temperature << "\n";
+				// std::cout << "exp = " << p << "\n";
+				// std::cout << "temp = " << temperature << "\n";
 				if (uni_rand >= p) {
 					// undo the move we just did
 					_pos_seq_pair = old_pos_seq;
 					_neg_seq_pair = old_neg_seq;
 					_match = old_match;
 					_match_x_rev = old_match_x_rev;
+					_macros = old_macros;
+					_curr_bbox_w = old_bbox_w;
+					_curr_bbox_h = old_bbox_h;
 				}
+				else {
+					accept_moves++;
+					accum_area += _curr_bbox_w * _curr_bbox_h;
+					accum_w += hpwl();
+					_area_norm = accum_area / accept_moves;
+					_w_norm = accum_w / accept_moves;
+				}
+							
+			
 			}
 
 		}

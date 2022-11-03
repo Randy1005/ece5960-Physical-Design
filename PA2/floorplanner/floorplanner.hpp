@@ -122,9 +122,10 @@ public:
 	inline double cost() const {
 		// std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 		// std::cout << "w = " << hpwl() << "\n";
-
-		return alpha * ((_curr_bbox_w * _curr_bbox_h) / _area_norm)
-			+ (1 - alpha) * (hpwl() / _w_norm); 
+		
+		return alpha * (static_cast<double>(_curr_bbox_w * _curr_bbox_h) / _area_norm)
+			+ (1 - alpha) * (static_cast<double>(hpwl()) / _w_norm); 
+		
 	}
 
 
