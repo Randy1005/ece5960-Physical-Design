@@ -177,8 +177,9 @@ void FloorPlanner::simulated_annealing() {
 			_update_weighted_lcs();
 
 			double delta = cost() - old_cost;
-			delta *= 100;
-			
+		
+			// FIXME: sclae delta by 100 here?
+
 			std::cout << "new_cost = " << cost() << "\n";
 			std::cout << "old_cost = " << old_cost << "\n";
 			if (delta < 0) {
@@ -197,7 +198,7 @@ void FloorPlanner::simulated_annealing() {
 				std::cout << "temp = " << temperature << "\n";
 				// FIXME: exp is always nearly 1, making this always accept 
 				// worse solution
-				if (uni_rand < p) {
+				if (uni_rand >= p) {
 					// undo the move we just did
 					_pos_seq_pair = old_pos_seq;
 					_neg_seq_pair = old_neg_seq;

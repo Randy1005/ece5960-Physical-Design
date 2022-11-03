@@ -124,7 +124,7 @@ public:
 		// std::cout << "w = " << hpwl() << "\n";
 
 		return alpha * ((_curr_bbox_w * _curr_bbox_h) / _area_norm)
-			+ (1 - alpha) * (hpwl() / _w_norm);
+			+ (1 - alpha) * (hpwl() / _w_norm); 
 	}
 
 
