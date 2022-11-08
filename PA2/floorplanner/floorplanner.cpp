@@ -142,16 +142,14 @@ void FloorPlanner::init_floorplan() {
 	_update_weighted_lcs();	
 
 	// initialize Anorm, Wnorm
-	_w_norm = hpwl();
-	_area_norm = _curr_bbox_w * _curr_bbox_h;
+	// _w_norm = hpwl();
+	// _area_norm = _curr_bbox_w * _curr_bbox_h;
 }
 
 void FloorPlanner::simulated_annealing() {
-	int accept_moves = 1;
-	int accum_area = _curr_bbox_w * _curr_bbox_h;
-	int accum_w = hpwl(); 
 
-	double temperature = 1000000.0;
+	double temperature = 100000.0;
+	double orig_temp = temperature;
 	bool frozen = false;
 
 	while (!frozen) {
@@ -178,29 +176,28 @@ void FloorPlanner::simulated_annealing() {
 			}
 			
 			_update_weighted_lcs();
+			std::cout << "cost = " << cost() << "\n";
 			double delta = cost() - old_cost;
-		
+			std::cout << "delta = " << delta << "\n";
 			// FIXME: scale delta by ?
 			
-			std::cout << "new_cost = " << cost() << "\n";
-			std::cout << "old_cost = " << old_cost << "\n";
 			if (delta < 0) {
 				std::cout << "accept\n";
-				accept_moves++;
-				accum_area += _curr_bbox_w * _curr_bbox_h;
-				accum_w += hpwl();
-				_area_norm = accum_area / accept_moves;
-				_w_norm = accum_w / accept_moves;
+				// accept_moves++;
+				// accum_area += _curr_bbox_w * _curr_bbox_h;
+				// accum_w += hpwl();
+				// _area_norm = accum_area / accept_moves;
+				// _w_norm = accum_w / accept_moves;
 			}
 			else {
-				
 				double uni_rand = _uni_real_dist(_rng);
-				// std::cout << "uni_rand = " << uni_rand << "\n";
-				double p = std::exp(static_cast<double>(-delta * 100) / temperature);
-				// std::cout << "power = " << static_cast<double>(-delta) / temperature << "\n";
-				// std::cout << "exp = " << p << "\n";
-				// std::cout << "temp = " << temperature << "\n";
-				if (uni_rand >= p) {
+				/*
+				double uni_rand = _uni_real_dist(_rng);
+				std::cout << "uni_rand = " << uni_rand << "\n";
+				double p = std::exp(static_cast<double>(-delta) / temperature);
+				std::cout << "exp = " << p << "\n";
+				*/
+				// if (uni_rand <= .9) {
 					// undo the move we just did
 					_pos_seq_pair = old_pos_seq;
 					_neg_seq_pair = old_neg_seq;
@@ -209,15 +206,8 @@ void FloorPlanner::simulated_annealing() {
 					_macros = old_macros;
 					_curr_bbox_w = old_bbox_w;
 					_curr_bbox_h = old_bbox_h;
-				}
-				else {
-					accept_moves++;
-					accum_area += _curr_bbox_w * _curr_bbox_h;
-					accum_w += hpwl();
-					_area_norm = accum_area / accept_moves;
-					_w_norm = accum_w / accept_moves;
-				}
-							
+				// }
+										
 			
 			}
 

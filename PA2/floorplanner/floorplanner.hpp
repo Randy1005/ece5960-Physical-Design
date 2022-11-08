@@ -92,22 +92,29 @@ public:
 	 */
 	inline int hpwl() const {
 		int w = 0;
+		int llx, lly = 0;
 		for (const auto& net : _net_to_macros) {
 			int max_x = 0, min_x = std::numeric_limits<int>::max(); 
 			int max_y = 0, min_y = std::numeric_limits<int>::max();
+			
 			for (const auto& b : net) {
-				max_x = std::max(_macros[b].x + _macros[b].w, max_x);
-				min_x = std::min(_macros[b].x, min_x);
-				max_y = std::max(_macros[b].y + _macros[b].h, max_y);
-				min_y = std::min(_macros[b].y, min_y);
+				const Macro& m = _macros[b];
+
+				if (m.type == MacroType::BLOCK) {
+					llx =	2 * m.x + (m.w - m.x);	
+					lly = 2 * m.y + (m.h - m.y);
+				}
+				else {
+					llx = 2 * m.x;
+					lly = 2 * m.y;
+				}
+
+				max_x = std::max(llx, max_x);
+				min_x = std::min(llx, min_x);
+				max_y = std::max(lly, max_y);
+				min_y = std::min(lly, min_y);
 			}
 
-			/*
-			std::cout << "max_x = " << max_x << "\n";
-			std::cout << "min_x = " << min_x << "\n";
-			std::cout << "max_y = " << max_y << "\n";
-			std::cout << "min_y = " << min_y << "\n";
-			*/
 			w += ((max_x - min_x) + (max_y - min_y));
 		}
 
@@ -123,9 +130,8 @@ public:
 		// std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 		// std::cout << "w = " << hpwl() << "\n";
 		
-		return alpha * (static_cast<double>(_curr_bbox_w * _curr_bbox_h) / _area_norm)
-			+ (1 - alpha) * (static_cast<double>(hpwl()) / _w_norm); 
-		
+		return alpha * static_cast<double>(_curr_bbox_w * _curr_bbox_h)
+			+ (1 - alpha) * static_cast<double>(hpwl()); 
 	}
 
 
