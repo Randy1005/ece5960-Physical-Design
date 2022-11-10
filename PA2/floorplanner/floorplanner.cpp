@@ -120,7 +120,10 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
 
 
 void FloorPlanner::init_floorplan() {
-  _pos_seq_pair.resize(n_blks);
+  // initialize chip outline aspect ratio
+	_outline_asp_ratio = static_cast<double>(chip_height) / chip_width;	
+	
+	_pos_seq_pair.resize(n_blks);
 	_neg_seq_pair.resize(n_blks);
 	_match.resize(n_blks);
 	_match_x_rev.resize(n_blks);
@@ -147,9 +150,9 @@ void FloorPlanner::init_floorplan() {
 }
 
 void FloorPlanner::simulated_annealing() {
-	double temperature = 10.0;
+	double temperature = 10000.0;
 	bool frozen = false;
-
+	/*
 	int k = 100;
 	while (k--) {
 		std::vector<int> old_pos_seq = _pos_seq_pair;
@@ -189,11 +192,10 @@ void FloorPlanner::simulated_annealing() {
 		}
 
 	}
+	*/
 
-
-	/*
 	while (!frozen) {
-		int k = 10;
+		int k = 10000;
 		while (k--) {
 			// cache previous sequence pair
 			// so we could undo
@@ -211,14 +213,17 @@ void FloorPlanner::simulated_annealing() {
 			if (move_choice == 0) {
 				_swap_blks_pos();
 			}
-			else {
+			else if (move_choice == 1) {
 				_swap_blks_neg();
+			}
+			else {
+				_rotate_blk();
 			}
 			
 			_update_weighted_lcs();
 			std::cout << "cost = " << cost() << "\n";
 			double delta = cost() - old_cost;
-			std::cout << "delta = " << delta << "\n";
+			// std::cout << "delta = " << delta << "\n";
 			// FIXME: scale delta by ?
 			
 			if (delta < 0) {
@@ -230,11 +235,11 @@ void FloorPlanner::simulated_annealing() {
 			}
 			else {
 				double uni_rand = _uni_real_dist(_rng);
-				std::cout << "uni_rand = " << uni_rand << "\n";
+				// std::cout << "uni_rand = " << uni_rand << "\n";
 				double p = std::exp(static_cast<double>(-delta) / temperature);
-				std::cout << "exp = " << p << "\n";
+				// std::cout << "exp = " << p << "\n";
 					
-				if (uni_rand < p) {
+				if (uni_rand > p) {
 					std::cout << "reject\n";
 					// undo the move we just did
 					_pos_seq_pair = old_pos_seq;
@@ -256,7 +261,6 @@ void FloorPlanner::simulated_annealing() {
 
 		temperature *= .95;
 	}
-	*/
 	
 }
 
@@ -394,6 +398,15 @@ void FloorPlanner::_swap_blks_neg() {
 	_match_x_rev[_neg_seq_pair_rev[rev_blk_b]].at_y = rev_blk_b;
 	_match_x_rev[_neg_seq_pair_rev[rev_blk_a]].at_y = rev_blk_a;
 	
+}
+
+void FloorPlanner::_rotate_blk() {
+	int blk = _uni_int_dist(_rng);
+
+	int tmp = _macros[blk].w;
+	_macros[blk].w = _macros[blk].h;
+	_macros[blk].h = tmp;
+
 }
 
 }

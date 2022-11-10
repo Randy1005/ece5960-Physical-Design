@@ -123,15 +123,20 @@ public:
 
 	/**
 	 * @brief cost
-	 * cost function = alpha * (Area / Anorm) + (1-alpha) * (WireLength / Wnorm)
-	 * where Anorm = average area when we generate a solution m times
+	 * cost function = alpha * area + (1-alpha) * wirelength
 	 */
 	inline double cost() const {
 		// std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 		// std::cout << "w = " << hpwl() << "\n";
-		
+
+		double exceeded_width = (_curr_bbox_w - chip_width) > 0 ? _curr_bbox_w - chip_width : 0.0;
+		double exceeded_height = (_curr_bbox_h - chip_height) > 0 ? _curr_bbox_h - chip_height : 0.0;
+		double exceeded_outline = exceeded_width + exceeded_height;
+
+		// std::cout << "exceeded outline penalty = " << exceeded_width + exceeded_height << "\n";
+	
 		return alpha * static_cast<double>(_curr_bbox_w * _curr_bbox_h)
-			+ (1 - alpha) * static_cast<double>(hpwl()); 
+			+ (1 - alpha) * static_cast<double>(hpwl()) /* 0.4 * exceeded_outline * 4000.0 */; 
 	}
 
 
@@ -179,6 +184,9 @@ private:
 	
 	// Move 2: swap 2 blocks in the negative sequence
 	void _swap_blks_neg();
+
+	// Move 3: change orientation
+	void _rotate_blk();
 	
   std::unordered_map<std::string, int> _name_to_macro;
   std::vector<std::vector<int>> _net_to_macros;
@@ -194,6 +202,10 @@ private:
 
 	// current floorplan width, height
 	int _curr_bbox_w, _curr_bbox_h;
+
+	// chip aspect ratio
+	double _outline_asp_ratio;
+
 
   std::default_random_engine _rng;
 	std::random_device _rd;
