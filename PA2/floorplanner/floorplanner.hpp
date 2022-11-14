@@ -80,10 +80,20 @@ public:
 
 	void dump(std::ostream& os) const;
 
+	void write_result(std::ostream& os, double runtime) const;
 
   inline int id_of(const std::string& name) {
     return _name_to_macro[name];
   }
+
+	inline void sa_multiple_passes() {
+		int passes = 0;
+		do {
+			std::cout << "pass " << passes << "\n";
+			simulated_annealing();
+			passes++;
+		} while ((_curr_bbox_w > chip_width || _curr_bbox_h > chip_height) && passes < 10);
+	}
 	
 	/**
 	 * @brief hpwl
@@ -129,31 +139,30 @@ public:
 		// std::cout << "area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 		// std::cout << "w = " << hpwl() << "\n";
 
-		double exceeded_width = (_curr_bbox_w - chip_width) > 0 ? _curr_bbox_w - chip_width : 0.0;
-		double exceeded_height = (_curr_bbox_h - chip_height) > 0 ? _curr_bbox_h - chip_height : 0.0;
-		double exceeded_outline = exceeded_width + exceeded_height;
+		double asp_ratio = static_cast<double>(_curr_bbox_w) / _curr_bbox_h;	
+		double curr_area = static_cast<double>(_curr_bbox_w) * _curr_bbox_h;
+		double asp_ratio_diff = std::abs(asp_ratio - _outline_asp_ratio); 
 
-		// std::cout << "exceeded outline penalty = " << exceeded_width + exceeded_height << "\n";
 	
-		return alpha * static_cast<double>(_curr_bbox_w * _curr_bbox_h)
-			+ (1 - alpha) * static_cast<double>(hpwl()) /* 0.4 * exceeded_outline * 4000.0 */; 
+		return alpha * curr_area + (1 - alpha) * static_cast<double>(hpwl()) + 
+					asp_ratio_diff * (curr_area / 2.5); 
 	}
 
 
 	inline void visualize() const {
 		std::cout << "{\"block_number\":" << n_blks << ",";
 		std::cout << "\"llx\":0,\"lly\":0,"
-			<< "\"urx\":" << chip_width << ","
-			<< "\"ury\":" << chip_height << ","
-			<< "\"area\":" << chip_width * chip_height << ","
+			<< "\"urx\":" << chip_width / 10.0 << ","
+			<< "\"ury\":" << chip_height / 10.0 << ","
+			<< "\"area\":" << chip_width * chip_height / 100.0 << ","
 			<< "\"coordinates\":[";
 		int blks = 0;
 		for (blks = 0; blks < n_blks;) {
 			std::cout << "{\"idx\":\"" << _macros[blks].name << "\","
-				<< "\"llx\":" << _macros[blks].x << ","
-				<< "\"lly\":" << _macros[blks].y << ","
-				<< "\"width\":" << _macros[blks].w << ","
-				<< "\"height\":" << _macros[blks].h << "}";
+				<< "\"llx\":" << _macros[blks].x / 10.0 << ","
+				<< "\"lly\":" << _macros[blks].y / 10.0 << ","
+				<< "\"width\":" << _macros[blks].w / 10.0 << ","
+				<< "\"height\":" << _macros[blks].h / 10.0 << "}";
 			if (blks++ < n_blks-1) {
 				std::cout << ",";
 			}
@@ -169,6 +178,8 @@ public:
   int n_terms;
   int n_nets;
   double alpha;
+	double initial_temp;
+	int moves_per_temp;
 
 private:
 	
@@ -210,7 +221,7 @@ private:
   std::default_random_engine _rng;
 	std::random_device _rd;
 	std::uniform_int_distribution<int> _uni_int_dist;	
-	std::uniform_int_distribution<int> _uni_int_dist02;
+	std::uniform_int_distribution<int> _uni_int_dist03;
 	std::uniform_real_distribution<double> _uni_real_dist;
 	// match list
 	// records which index the blocks is at

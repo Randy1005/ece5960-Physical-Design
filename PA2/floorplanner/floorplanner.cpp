@@ -18,10 +18,12 @@ static inline void rtrim(std::string &s) {
 
 
 FloorPlanner::FloorPlanner() :
-	_rng(_rd())
+	_rng(_rd()),
+	initial_temp(20000.0),
+	moves_per_temp(20000)
 {
 	_uni_real_dist = std::uniform_real_distribution<double>(0, 1);
-	_uni_int_dist02 = std::uniform_int_distribution<int>(0, 2);
+	_uni_int_dist03 = std::uniform_int_distribution<int>(0, 3);
 }
 
 
@@ -121,7 +123,7 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
 
 void FloorPlanner::init_floorplan() {
   // initialize chip outline aspect ratio
-	_outline_asp_ratio = static_cast<double>(chip_height) / chip_width;	
+	_outline_asp_ratio = static_cast<double>(chip_width) / chip_height;	
 	
 	_pos_seq_pair.resize(n_blks);
 	_neg_seq_pair.resize(n_blks);
@@ -150,52 +152,11 @@ void FloorPlanner::init_floorplan() {
 }
 
 void FloorPlanner::simulated_annealing() {
-	double temperature = 10000.0;
+	double temperature = initial_temp;
 	bool frozen = false;
-	/*
-	int k = 100;
-	while (k--) {
-		std::vector<int> old_pos_seq = _pos_seq_pair;
-		std::vector<int> old_neg_seq = _neg_seq_pair;
-		std::vector<Match> old_match = _match;
-		std::vector<Match> old_match_x_rev = _match_x_rev;
-		std::vector<Macro> old_macros = _macros;
-		int old_bbox_w = _curr_bbox_w;
-		int old_bbox_h = _curr_bbox_h;
-		double old_cost = cost();
-		
-		int move_choice = _uni_int_dist02(_rng);
-
-		if (move_choice == 0) {
-			_swap_blks_pos();
-		}
-		else {
-			_swap_blks_neg();
-		}
-		
-		_update_weighted_lcs();
-		double delta = cost() - old_cost;
-
-
-		if (delta > 0) {
-			// undo
-			_pos_seq_pair = old_pos_seq;
-			_neg_seq_pair = old_neg_seq;
-			_match = old_match;
-			_match_x_rev = old_match_x_rev;
-			_macros = old_macros;
-			_curr_bbox_w = old_bbox_w;
-			_curr_bbox_h = old_bbox_h;
-		}
-		else {
-			std::cout << "cost = " << cost() << "\n";
-		}
-
-	}
-	*/
 
 	while (!frozen) {
-		int k = 10000;
+		int k = moves_per_temp;
 		while (k--) {
 			// cache previous sequence pair
 			// so we could undo
@@ -208,7 +169,7 @@ void FloorPlanner::simulated_annealing() {
 			int old_bbox_h = _curr_bbox_h;
 			double old_cost = cost();
 
-			int move_choice = _uni_int_dist02(_rng);
+			int move_choice = _uni_int_dist03(_rng);
 
 			if (move_choice == 0) {
 				_swap_blks_pos();
@@ -216,12 +177,14 @@ void FloorPlanner::simulated_annealing() {
 			else if (move_choice == 1) {
 				_swap_blks_neg();
 			}
+			else if (move_choice == 2) {
+				_rotate_blk();
+			}
 			else {
 				_rotate_blk();
 			}
 			
 			_update_weighted_lcs();
-			std::cout << "cost = " << cost() << "\n";
 			double delta = cost() - old_cost;
 			// std::cout << "delta = " << delta << "\n";
 			// FIXME: scale delta by ?
@@ -240,7 +203,7 @@ void FloorPlanner::simulated_annealing() {
 				// std::cout << "exp = " << p << "\n";
 					
 				if (uni_rand > p) {
-					std::cout << "reject\n";
+					// reject!
 					// undo the move we just did
 					_pos_seq_pair = old_pos_seq;
 					_neg_seq_pair = old_neg_seq;
@@ -255,7 +218,7 @@ void FloorPlanner::simulated_annealing() {
 
 		}
 
-		if (temperature < 10.0) {
+		if (temperature < 0.1) {
 			frozen = true;
 		}
 
@@ -334,8 +297,23 @@ void FloorPlanner::dump(std::ostream& os) const {
 	std::cout << "current hpwl = " << hpwl() << "\n";
 	std::cout << "current chip area = " << _curr_bbox_w * _curr_bbox_h << "\n";
 	std::cout << "current cost = " << cost() << "\n";
-
+	std::cout << "current asp ratio = " << static_cast<double>(_curr_bbox_w) / _curr_bbox_h << "\n";
 	visualize();
+}
+
+void FloorPlanner::write_result(std::ostream& os, double runtime) const {
+	os << cost() << "\n";
+	os << hpwl() << "\n";
+	os << _curr_bbox_w * _curr_bbox_h << "\n";
+	os << _curr_bbox_w << " " << _curr_bbox_h << "\n";
+	os << runtime << "\n";
+	for (int i = 0; i < n_blks; i++) {
+		os << _macros[i].name << " "
+			<< _macros[i].x << " "
+			<< _macros[i].y << " "
+			<< _macros[i].x + _macros[i].w << " "
+			<< _macros[i].y + _macros[i].h << "\n";
+	}
 }
 
 
@@ -406,7 +384,8 @@ void FloorPlanner::_rotate_blk() {
 	int tmp = _macros[blk].w;
 	_macros[blk].w = _macros[blk].h;
 	_macros[blk].h = tmp;
-
 }
+
+
 
 }
