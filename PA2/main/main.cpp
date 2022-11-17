@@ -12,7 +12,8 @@ int main(int argc, char* argv[]) {
 
   std::chrono::steady_clock::time_point start_time, end_time; 
   start_time = std::chrono::steady_clock::now(); 
-  fp.read_input(argv[1], argv[2], argv[3]);
+  
+	fp.read_input(argv[1], argv[2], argv[3]);
   fp.init_floorplan();
 	fp.sa_multiple_passes();
   end_time = std::chrono::steady_clock::now(); 

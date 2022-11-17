@@ -113,8 +113,6 @@ void FloorPlanner::read_input(const std::string& a, const std::string& blk_file,
     }
   }
 
-
-
 	_uni_int_dist = std::uniform_int_distribution(0, n_blks - 1);
 	ifs.close();
 }
