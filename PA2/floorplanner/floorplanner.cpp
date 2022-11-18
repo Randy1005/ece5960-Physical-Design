@@ -183,9 +183,15 @@ void FloorPlanner::simulated_annealing() {
 			}
 			
 			_update_weighted_lcs();
+			
+			if (_curr_bbox_w <= chip_width && _curr_bbox_h <= chip_height) {
+				frozen = true;
+				_in_bound = true;
+				std::cout << "SA not finished, but already in bound\n";
+				break;
+			}
+			
 			double delta = cost() - old_cost;
-			// std::cout << "delta = " << delta << "\n";
-			// FIXME: scale delta by ?
 			
 			if (delta < 0) {
 				// accept_moves++;
@@ -196,9 +202,7 @@ void FloorPlanner::simulated_annealing() {
 			}
 			else {
 				double uni_rand = _uni_real_dist(_rng);
-				// std::cout << "uni_rand = " << uni_rand << "\n";
 				double p = std::exp(static_cast<double>(-delta) / temperature);
-				// std::cout << "exp = " << p << "\n";
 					
 				if (uni_rand > p) {
 					// reject!

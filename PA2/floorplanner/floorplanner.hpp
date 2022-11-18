@@ -91,6 +91,9 @@ public:
 		do {
 			std::cout << "pass " << passes << "\n";
 			simulated_annealing();
+			if (_in_bound) {
+				break;
+			}
 			passes++;
 		} while ((_curr_bbox_w > chip_width || _curr_bbox_h > chip_height) && passes < 10);
 	}
@@ -237,6 +240,9 @@ private:
 
 	// wire length normalize factor
 	double _w_norm;
+
+	// to early break SA
+	bool _in_bound = false;
 };
 
 
