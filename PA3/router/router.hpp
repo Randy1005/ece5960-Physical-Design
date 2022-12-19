@@ -33,6 +33,12 @@ struct Router {
 
 	void build_adj_list();
 	void prim_mst();
+	// TODO:
+	// enumerate edges
+	// get all the pairs where
+	// e1, e2 has one common vertex
+	// (meaning it's 3 vertices connected)
+	void route();
 
 	int llx;
 	int lly;
