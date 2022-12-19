@@ -3,6 +3,7 @@
 #include <sstream>
 #include <chrono>
 #include <cassert>
+#include <limits>
 
 namespace router {
 
@@ -152,20 +153,17 @@ void Router::read_input(const std::string& input_file) {
 }
 
 void Router::dump(std::ostream& os) const {
-	for (int i = 0; i < num_pins; i++) {
-		std::cout << "pin " << i << "\n";
-		for (const auto& adj : adj_list[i]) {
-			std::cout << "\t-> pin " << adj.pin_id << "\n";
-			std::cout << "\t\tdistance = " << adj.distance << "\n";
-		}
-		std::cout << "\n";
+	os << "Edge\tDistance\n";
+	for (int i = 1; i < num_pins; i++) {
+		os << parents[i] << " - " << i << "\t" <<
+			adj_list[i][parents[i]].distance << "\n";
 	}
 
-	std::cout << "chip llx = " << llx << "\n";
-	std::cout << "chip lly = " << lly << "\n";
-	std::cout << "chip urx = " << urx << "\n";
-	std::cout << "chip ury = " << ury << "\n";
-	std::cout << "num pins = " << num_pins << "\n";
+	os << "chip llx = " << llx << "\n";
+	os << "chip lly = " << lly << "\n";
+	os << "chip urx = " << urx << "\n";
+	os << "chip ury = " << ury << "\n";
+	os << "num pins = " << num_pins << "\n";
 }
 
 
@@ -185,6 +183,42 @@ void Router::build_adj_list() {
 			adj_list[i].push_back(n);
 		}
 	}
+
+}
+
+void Router::prim_mst() {
+	// initialize weight list & visted & parent 
+	weights.resize(num_pins, std::numeric_limits<int>::max());
+	parents.resize(num_pins, -1);
+	visited.resize(num_pins, false);
+	weights[0] = 0;
+	
+	// get the minimum weight and unvisited vertex
+	int min_idx = 0;
+	
+	int iters = num_pins - 1;
+	while (iters--) {
+		visited[min_idx] = true;
+
+		// update weight and parent for this
+		// minimum weight vertex
+		std::vector<router::Node>& adj_verts = adj_list[min_idx];
+
+		for (const auto& n : adj_verts) {
+			if (!visited[n.pin_id] && 
+					n.distance < weights[n.pin_id]) {
+				// update weight and parent
+				parents[n.pin_id] = min_idx;
+				weights[n.pin_id] = n.distance;
+				if (n.distance < weights[min_idx]) {
+					min_idx = n.pin_id;
+				}
+			}
+		}
+	}
+
+	
+
 
 }
 

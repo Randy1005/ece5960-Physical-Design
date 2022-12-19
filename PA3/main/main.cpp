@@ -15,6 +15,7 @@ int main(int argc, char* argv[]) {
   start_time = std::chrono::steady_clock::now(); 
   rt.read_input(argv[1]);
   rt.build_adj_list();
+  rt.prim_mst();
   end_time = std::chrono::steady_clock::now(); 
 
   rt.dump(std::cout);
