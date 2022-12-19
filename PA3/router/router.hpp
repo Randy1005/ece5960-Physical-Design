@@ -1,6 +1,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 namespace router {
 
@@ -15,11 +16,22 @@ struct Pin {
 	std::string name;
 };
 
+struct Node {
+	Node() = default;
+	// rectilinear weight
+	int distance;
+
+	int pin_id;
+
+};
+
 
 struct Router {
 	Router();
 	void read_input(const std::string& input_file);
-	void dump(std::ostream& os);
+	void dump(std::ostream& os) const;
+
+	void build_adj_list();
 
 	int llx;
 	int lly;
@@ -28,6 +40,8 @@ struct Router {
 	int num_pins;
 
 	std::vector<router::Pin> pins;
+	std::vector<std::vector<router::Node>> adj_list;
+
 };
 
 

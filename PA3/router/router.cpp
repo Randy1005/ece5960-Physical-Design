@@ -151,11 +151,13 @@ void Router::read_input(const std::string& input_file) {
 	}
 }
 
-void Router::dump(std::ostream& os) {
-	for (const auto& p : pins) {
-		std::cout << "pin name: " << p.name << "\n";
-		std::cout << "pin x: " << p.x << "\n";
-		std::cout << "pin y: " << p.y << "\n";
+void Router::dump(std::ostream& os) const {
+	for (int i = 0; i < num_pins; i++) {
+		std::cout << "pin " << i << "\n";
+		for (const auto& adj : adj_list[i]) {
+			std::cout << "\t-> pin " << adj.pin_id << "\n";
+			std::cout << "\t\tdistance = " << adj.distance << "\n";
+		}
 		std::cout << "\n";
 	}
 
@@ -166,6 +168,25 @@ void Router::dump(std::ostream& os) {
 	std::cout << "num pins = " << num_pins << "\n";
 }
 
+
+void Router::build_adj_list() {
+	adj_list.resize(num_pins);
+	for (int i = 0; i < num_pins; i++) {
+		for (int j = 0; j < num_pins; j++) {
+			if (j == i) {
+				continue;
+			}
+			router::Node n;
+			n.pin_id = j;
+			n.distance = 
+				std::abs(pins[i].x - pins[j].x) +
+				std::abs(pins[i].y - pins[j].y);
+
+			adj_list[i].push_back(n);
+		}
+	}
+
+}
 
 
 }
