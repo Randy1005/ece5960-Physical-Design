@@ -153,11 +153,6 @@ void Router::read_input(const std::string& input_file) {
 }
 
 void Router::dump(std::ostream& os) const {
-	os << "Edge\tDistance\n";
-	for (int i = 1; i < num_pins; i++) {
-		os << parents[i] << " - " << i << "\t" <<
-			adj_list[i][parents[i]].distance << "\n";
-	}
 
 	os << "chip llx = " << llx << "\n";
 	os << "chip lly = " << lly << "\n";
@@ -177,8 +172,9 @@ void Router::build_adj_list() {
 			router::Node n;
 			n.pin_id = j;
 			n.distance = 
-				std::abs(pins[i].x - pins[j].x) +
-				std::abs(pins[i].y - pins[j].y);
+				std::pow(pins[i].x - pins[j].x, 2) +
+				std::pow(pins[i].y - pins[j].y, 2);
+			n.distance = std::sqrt(n.distance);
 
 			adj_list[i].push_back(n);
 		}

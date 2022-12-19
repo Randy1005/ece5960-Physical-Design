@@ -19,7 +19,7 @@ struct Pin {
 struct Node {
 	Node() = default;
 	// rectilinear weight
-	int distance;
+	double distance;
 
 	int pin_id;
 
@@ -53,7 +53,7 @@ struct Router {
 	// all initialized to INF
 	// with one vertex initialized to 0
 	// that's the one to start with
-	std::vector<int> weights;
+	std::vector<double> weights;
 
 	// keep track of parents while we
 	// visit each vertex
