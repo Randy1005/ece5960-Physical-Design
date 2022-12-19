@@ -1,0 +1,26 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../router/router.hpp
+string
+-
+vector
+-
+iostream
+-
+
+/home/randy/ece5960-Physical-Design/PA3/main/main.cpp
+iostream
+-
+router/router.hpp
+-
+chrono
+-
+fstream
+-
+

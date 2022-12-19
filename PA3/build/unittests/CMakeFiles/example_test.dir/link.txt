@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 CMakeFiles/example_test.dir/example_test.cpp.o -o example_test  ../router/librouter.a -lstdc++fs 

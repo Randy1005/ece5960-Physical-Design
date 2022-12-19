@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 CMakeFiles/Router.dir/main.cpp.o -o Router  ../router/librouter.a 

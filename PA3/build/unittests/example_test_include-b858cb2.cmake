@@ -1,0 +1,5 @@
+if(EXISTS "/home/randy/ece5960-Physical-Design/PA3/build/unittests/example_test_tests-b858cb2.cmake")
+  include("/home/randy/ece5960-Physical-Design/PA3/build/unittests/example_test_tests-b858cb2.cmake")
+else()
+  add_test(example_test_NOT_BUILT-b858cb2 example_test_NOT_BUILT-b858cb2)
+endif()
