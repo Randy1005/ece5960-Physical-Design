@@ -4,8 +4,16 @@
 #include <chrono>
 #include <cassert>
 #include <limits>
+#include <utility>
 
 namespace router {
+
+
+double dist(Pin& p0, Pin& p1) {
+	return std::sqrt(std::pow(p0.x - p1.x, 2) +
+									std::pow(p0.y - p1.y, 2));
+}
+
 
 Pin::Pin(int x, int y, std::string& name) :
 	x(x),
@@ -153,6 +161,10 @@ void Router::read_input(const std::string& input_file) {
 }
 
 void Router::dump(std::ostream& os) const {
+	std::cout << "Edges:\n";
+	for (auto& e : edges) {
+		std::cout << e.first << " - " << e.second << "\n";
+	}
 
 	os << "chip llx = " << llx << "\n";
 	os << "chip lly = " << lly << "\n";
@@ -169,12 +181,10 @@ void Router::build_adj_list() {
 			if (j == i) {
 				continue;
 			}
-			router::Node n;
+		
+			Node n;
 			n.pin_id = j;
-			n.distance = 
-				std::pow(pins[i].x - pins[j].x, 2) +
-				std::pow(pins[i].y - pins[j].y, 2);
-			n.distance = std::sqrt(n.distance);
+			n.distance = dist(pins[i], pins[j]);
 
 			adj_list[i].push_back(n);
 		}
@@ -184,16 +194,25 @@ void Router::build_adj_list() {
 
 void Router::prim_mst() {
 	// initialize weight list & visted & parent 
-	weights.resize(num_pins, std::numeric_limits<int>::max());
+	weights.resize(num_pins, std::numeric_limits<double>::max());
 	parents.resize(num_pins, -1);
 	visited.resize(num_pins, false);
-	weights[0] = 0;
+	weights[0] = 0.0;
 	
-	// get the minimum weight and unvisited vertex
-	int min_idx = 0;
 	
 	int iters = num_pins - 1;
 	while (iters--) {
+		
+		// extract vertex with the min weight
+		int min_idx;
+		double min_weight = std::numeric_limits<double>::max();
+		for (int i = 0; i < num_pins; i++) {
+			if (!visited[i] && weights[i] < min_weight) {
+				min_idx = i;
+				min_weight = weights[i];
+			}
+		}
+
 		visited[min_idx] = true;
 
 		// update weight and parent for this
@@ -206,15 +225,24 @@ void Router::prim_mst() {
 				// update weight and parent
 				parents[n.pin_id] = min_idx;
 				weights[n.pin_id] = n.distance;
-				if (n.distance < weights[min_idx]) {
-					min_idx = n.pin_id;
-				}
 			}
 		}
 	}
 
-	
+	// store the edges
+	for (int i = 1; i < num_pins; i++) {
+		edges.push_back(std::make_pair(parents[i], i));
+	}
+}
 
+
+void Router::route() {
+	// compute MST
+	prim_mst();
+
+	// initialize savings & steiner points
+	savings.resize(edges.size(), 0);
+	steiner_pts.resize(edges.size(), -1);
 
 }
 

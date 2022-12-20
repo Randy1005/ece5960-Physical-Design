@@ -10,7 +10,15 @@ struct Router;
 
 
 struct Pin {
+	Pin() = default;
 	Pin(int x, int y, std::string& name);
+	bool operator==(const Pin& p) {
+		return x == p.x && y == p.y;
+	}
+	
+	bool operator!=(const Pin& p) {
+		return x != p.x || y != p.y;
+	}
 	int x;
 	int y;
 	std::string name;
@@ -66,7 +74,14 @@ struct Router {
 	// parent[root_vertex] = -1
 	std::vector<int> parents;
 
+	// store the edges
+	std::vector<std::pair<int, int>> edges;
 
+	// wirelength savings
+	std::vector<double> savings;
+
+	// added steiner points
+	std::vector<int> steiner_pts; 
 };
 
 
