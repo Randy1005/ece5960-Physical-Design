@@ -240,9 +240,35 @@ void Router::route() {
 	// compute MST
 	prim_mst();
 
-	// initialize savings & steiner points
-	savings.resize(edges.size(), 0);
-	steiner_pts.resize(edges.size(), -1);
+	int cnt = 0;
+	std::vector<int> candidates;
+	for (int p = 0; p < num_pins; p++) {
+		for (int i = 0; i < edges.size(); i++) {
+			if (edges[i].first != p && edges[i].second != p) {
+				std::cout << "not a triplet\n";
+				continue;
+			}
+			else {
+				cnt++;
+				if (edges[i].first == p) {
+					candidates.push_back(edges[i].second);
+				} else {
+					candidates.push_back(edges[i].first);
+				}
+
+				if (cnt == 2) {
+					std::cout << "triplet\n";
+					for (const auto& v : candidates) {
+						std::cout << v << " ";
+					}
+					std::cout << "\n";
+					
+					candidates.clear();
+					cnt = 0;
+				}
+			}
+		}
+	}
 
 }
 
