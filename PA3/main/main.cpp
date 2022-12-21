@@ -18,13 +18,13 @@ int main(int argc, char* argv[]) {
   rt.route();
   end_time = std::chrono::steady_clock::now(); 
 
-  rt.dump(std::cout);
-
+  std::ofstream ofs(argv[2]);
+  rt.write_result(ofs);
 
   std::chrono::duration<double, std::milli> elapsed_time = end_time - start_time;  
   std::cout << "Run time: " 
-            << elapsed_time.count()
-            << " ms\n";
+            << elapsed_time.count() / 1000.0 
+            << " s\n";
   
 
   return 0;

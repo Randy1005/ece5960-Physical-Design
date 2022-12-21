@@ -283,10 +283,6 @@ void Router::route() {
 						n0.distance = dist(p_s, pins[edges[i].first]);
 						n1.distance = dist(p_s, pins[edges[i].second]);
 						
-						std::cout << "add median pt:\n";
-						std::cout << "n0.dist = " << n0.distance << "\n";
-						std::cout << "n1.dist = " << n1.distance << "\n";
-						
 						adj_list.resize(pins.size());
 						adj_list[edges[i].first].push_back(n0);
 						adj_list[edges[i].first].push_back(n1);
@@ -313,6 +309,25 @@ void Router::route() {
 	visited.clear();
 	
 	prim_mst();
+}
+
+void Router::write_result(std::ostream& os) {
+	double wirelength = 0.0;
+	for (auto& e : edges) {
+		wirelength += dist(pins[e.first], pins[e.second]);
+	}
+
+	os << "Wirelength = " << static_cast<long long int>(wirelength) << "\n";
+	for (auto& e : edges) {
+		if (pins[e.first].x == pins[e.second].x) {
+			os << "H-line ";
+		}
+		else if (pins[e.first].y == pins[e.first].y) {
+			os << "V-line ";
+		}
+		os << "(" << pins[e.first].x << "," << pins[e.first].y
+							<< ") (" << pins[e.second].x << "," << pins[e.second].y << ")\n";
+	}
 }
 
 

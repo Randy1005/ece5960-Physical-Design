@@ -1,0 +1,11 @@
+./build/main/Router input_pa3/case1 outputs/1.out
+./build/main/Router input_pa3/case2 outputs/2.out
+./build/main/Router input_pa3/case3 outputs/3.out
+./build/main/Router input_pa3/case4 outputs/4.out
+./build/main/Router input_pa3/case5 outputs/5.out
+./build/main/Router input_pa3/case6 outputs/6.out
+./build/main/Router input_pa3/case7 outputs/7.out
+./build/main/Router input_pa3/case8 outputs/8.out
+./build/main/Router input_pa3/case100000 outputs/100000.out
+./build/main/Router input_pa3/case200000 outputs/200000.out
+./build/main/Router input_pa3/case500000 outputs/500000.out

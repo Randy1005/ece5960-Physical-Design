@@ -48,6 +48,8 @@ struct Router {
 	// (meaning it's 3 vertices connected)
 	void route();
 
+	void write_result(std::ostream& os);
+
 	int llx;
 	int lly;
 	int urx;
