@@ -15,3 +15,14 @@
 
 + Run: `./fp [alpha] [input.block] [input.nets] [output]`
 
+## PA3
+### How to Run
++ build: 
+	+ `mkdir build`
+	+ `cd build`
+	+ `cmake ../`
+	+ `make`
+	+ the executable is located in `build/main`
+
++ Run: `./Router [input] [output]`
+
