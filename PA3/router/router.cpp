@@ -194,29 +194,33 @@ void Router::build_adj_list() {
 
 void Router::prim_mst() {
 	// initialize weight list & visted & parent 
-	weights.resize(num_pins, std::numeric_limits<double>::max());
-	parents.resize(num_pins, -1);
-	visited.resize(num_pins, false);
+	weights.resize(pins.size(), std::numeric_limits<double>::max());
+	parents.resize(pins.size(), -1);
+	visited.resize(pins.size(), false);
+	edges.clear();
 	weights[0] = 0.0;
 	
-	
-	int iters = num_pins - 1;
+
+	int iters = pins.size() - 1;
 	while (iters--) {
 		
 		// extract vertex with the min weight
 		int min_idx;
 		double min_weight = std::numeric_limits<double>::max();
-		for (int i = 0; i < num_pins; i++) {
+		for (int i = 0; i < pins.size(); i++) {
 			if (!visited[i] && weights[i] < min_weight) {
 				min_idx = i;
 				min_weight = weights[i];
 			}
 		}
 
+		assert(min_idx < pins.size());
+
 		visited[min_idx] = true;
 
 		// update weight and parent for this
 		// minimum weight vertex
+		assert(min_idx < adj_list.size());
 		std::vector<router::Node>& adj_verts = adj_list[min_idx];
 
 		for (const auto& n : adj_verts) {
@@ -228,9 +232,8 @@ void Router::prim_mst() {
 			}
 		}
 	}
-
 	// store the edges
-	for (int i = 1; i < num_pins; i++) {
+	for (int i = 1; i < pins.size(); i++) {
 		edges.push_back(std::make_pair(parents[i], i));
 	}
 }
@@ -245,7 +248,6 @@ void Router::route() {
 	for (int p = 0; p < num_pins; p++) {
 		for (int i = 0; i < edges.size(); i++) {
 			if (edges[i].first != p && edges[i].second != p) {
-				std::cout << "not a triplet\n";
 				continue;
 			}
 			else {
@@ -257,19 +259,60 @@ void Router::route() {
 				}
 
 				if (cnt == 2) {
-					std::cout << "triplet\n";
-					for (const auto& v : candidates) {
-						std::cout << v << " ";
-					}
-					std::cout << "\n";
+				
+					int p0 = candidates[0];
+					int p2 = candidates[1];
 					
+					int x0 = pins[p0].x;
+					int y0 = pins[p0].y;
+					int x1 = pins[p].x;
+					int y1 = pins[p].y;
+					int x2 = pins[p2].x;
+					int y2 = pins[p2].y;
+					int x_s = std::max(std::min(x0, x1), 
+														std::min(std::max(x0, x1), x2));
+					int y_s = std::max(std::min(y0, y1), 
+														std::min(std::max(y0, y1), y2));
+
+					std::string name("steiner");
+					Pin p_s(x_s, y_s, name);
+					if (p_s != pins[p0] && p_s != pins[p] && p_s != pins[p2]) {
+						pins.push_back(p_s);
+						Node n0, n1;
+						n0.pin_id = n1.pin_id = pins.size() - 1;
+						n0.distance = dist(p_s, pins[edges[i].first]);
+						n1.distance = dist(p_s, pins[edges[i].second]);
+						
+						std::cout << "add median pt:\n";
+						std::cout << "n0.dist = " << n0.distance << "\n";
+						std::cout << "n1.dist = " << n1.distance << "\n";
+						
+						adj_list.resize(pins.size());
+						adj_list[edges[i].first].push_back(n0);
+						adj_list[edges[i].first].push_back(n1);
+
+						Node n2, n3;
+						n2.pin_id = p0;
+						n3.pin_id = p2;
+						n2.distance = n0.distance;
+						n3.distance = n1.distance;
+						adj_list[n0.pin_id].push_back(n2);
+						adj_list[n0.pin_id].push_back(n3);
+					}
+
 					candidates.clear();
 					cnt = 0;
 				}
 			}
 		}
 	}
-
+	
+	// reset for another prim
+	weights.clear();
+	parents.clear();
+	visited.clear();
+	
+	prim_mst();
 }
 
 
